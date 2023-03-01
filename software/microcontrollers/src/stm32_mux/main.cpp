@@ -69,7 +69,6 @@ void findLine() {
     if (matchCount == 0) {
         line.bearing = UINT16_NO_LINE;
         line.size = UINT8_NO_LINE;
-        line.isPresent = false;
         return;
     }
 
@@ -96,7 +95,6 @@ void findLine() {
     if (clusterStart == LDR_COUNT) {
         line.bearing = UINT16_NO_LINE;
         line.size = UINT8_NO_LINE;
-        line.isPresent = false;
         return;
     }
 
@@ -113,7 +111,6 @@ void findLine() {
     // Sets lineSize as the ratio of the cluster size to 180°
     line.size = roundf(
         (smallerAngleDiff(clusterStartAngle, clusterEndAngle) / 180.0) * 100);
-    line.isPresent = true;
 }
 
 // CALIBRATION: Determines threshold values for the photodiodes
@@ -148,7 +145,7 @@ void printLDR() {
     uint16_t values[LDR_COUNT];
     for (uint8_t i = 0; i < LDR_COUNT; ++i) values[i] = readLDR(i);
 
-    if (line.isPresent) {
+    if (line.bearing != UINT16_NO_LINE) {
         Serial.printf("%03d.%02dº %01d.%02d |", line.bearing / 100,
                       line.bearing % 100, line.size / 100, line.size % 100);
     } else {

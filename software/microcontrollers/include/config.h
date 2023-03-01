@@ -5,7 +5,6 @@
 #define UINT8_NO_LINE  UINT8_MAX
 
 struct LineData {
-    bool isPresent = false;
     uint16_t bearing = UINT16_NO_LINE; // 0(.)00° to 360(.)00°
     uint8_t size = UINT8_NO_LINE;      // 0(.)00 to 1(.)00
 };

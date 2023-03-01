@@ -82,6 +82,9 @@ void loop() {
         }
     }
 
+    // Read ball data from coral
+    // TODO
+
     // Ball following
     // TODO
 
@@ -90,12 +93,13 @@ void loop() {
 
     // START DEBUG
     // // Print debug data
-    // if (line.isPresent) {
-    //     Serial.printf("Line %03d.%02dº %01d.%02d\n | ", line.bearing / 100,
+    // if (line.bearing != UINT16_NO_LINE) {
+    //     Serial.printf("Line %03d.%02dº %01d.%02d | \n", line.bearing / 100,
     //                   line.bearing % 100, line.size / 100, line.size % 100);
     // } else {
-    //     Serial.printf("Line            \n |");
+    //     Serial.printf("Line             |\n");
     // }
+    // delay(100);
 
     // // Redirect MUX Serial to monitor
     // if (MUX_SERIAL.available() > 0) Serial.print(char(MUX_SERIAL.read()));
