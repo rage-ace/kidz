@@ -4,9 +4,12 @@ Find out more at [notes.skytect.one/robocup](https://notes.skytect.one/robocup)!
 
 ```bash
 .
-├── schematics/            # All CAD schematics are located here
-│   ├── pcbs/                  # Printed circuit boards
-│   └── ...
+├── designs/               # All CAD designs are located here
+│   └── pcb-schematics/        # PCB schematics
+│       ├── layer1/                # Layer 1 PCB
+│       ├── layer2/                # Layer 2 PCB
+│       ├── layer3/                # Layer 3 PCB
+│       └── layer4/                # Layer 4 PCB
 ├── software/              # All code is located here
 │   ├── coral/             # Code for the Coral Dev Board Mini
 │   │   └── ...
