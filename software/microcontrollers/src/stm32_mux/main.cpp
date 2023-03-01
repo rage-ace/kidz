@@ -4,6 +4,7 @@
 #include "stm32_mux/include/config.h"
 #include "util.h"
 
+// State
 struct LineData line;
 
 void setup() {

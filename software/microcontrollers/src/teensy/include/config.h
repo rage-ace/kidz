@@ -35,7 +35,8 @@
 
 // Movement Config
 
-#define ANGULAR_VELOCITY_MULTIPLIER 0.01
+#define ANGULAR_VELOCITY_MULTIPLIER 0.01F
+#define DRIVE_STALL_SPEED           30 // TODO: Tune this value
 
 // #define MOVE_ABOUT_BALL_MULTIPLIER 13.0
 
