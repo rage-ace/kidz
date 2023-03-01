@@ -5,7 +5,7 @@
 #include "util.h"
 
 // State
-struct LineData line;
+struct LineData line; // Read from stm32 mux
 struct MovementData {
     float angle = 0;             // 0º to 360º
     int16_t speed = 30;          // 30 to 4096
@@ -24,7 +24,7 @@ void setup() {
     pinMode(PIN_MOTOR_BR_PWM, OUTPUT);
 
     // Values from https://www.pjrc.com/teensy/td_pulse.html
-    // (F_CPU_ACTUAL = 600 MHz)
+    // (based on F_CPU_ACTUAL = 600 MHz)
     // analogWriteResolution(12); // TODO: Debug with Multimeter
     analogWriteFrequency(PIN_MOTOR_FL_PWM, 36621);
     analogWriteFrequency(PIN_MOTOR_FR_PWM, 36621);
@@ -68,7 +68,7 @@ void drive() {
 }
 
 void loop() {
-    // Read line data from mux
+    // Read line data from stm32 mux
     while (MUX_SERIAL.available() >= (signed int)(MUX_TX_PACKET_SIZE)) {
         const auto syncByte = MUX_SERIAL.read();
         if (syncByte == MUX_TX_SYNC_START_BYTE) {
@@ -82,7 +82,13 @@ void loop() {
         }
     }
 
-    // DEBUG
+    // Ball following
+    // TODO
+
+    // Line avoidance
+    // TODO
+
+    // START DEBUG
     // // Print debug data
     // if (line.isPresent) {
     //     Serial.printf("Line %03d.%02dº %01d.%02d\n | ", line.bearing / 100,
@@ -99,12 +105,6 @@ void loop() {
     movement.speed = 10;
     movement.angularVelocity = 10;
     // END DEBUG
-
-    // Ball following
-    // TODO
-
-    // Line avoidance
-    // TODO
 
     // Actuate outputs
     drive();
