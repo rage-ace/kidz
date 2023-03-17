@@ -5,32 +5,9 @@
 #include "util.h"
 
 // State
-struct LineData line;
+struct Line line;
 
-void setup() {
-    // Initialise Pins
-    pinMode(PIN_LED_DEBUG, OUTPUT);
-    pinMode(PIN_LDRMUX1_S0, OUTPUT);
-    pinMode(PIN_LDRMUX1_S1, OUTPUT);
-    pinMode(PIN_LDRMUX1_S2, OUTPUT);
-    pinMode(PIN_LDRMUX1_S3, OUTPUT);
-    pinMode(PIN_LDRMUX2_S0, OUTPUT);
-    pinMode(PIN_LDRMUX2_S1, OUTPUT);
-    pinMode(PIN_LDRMUX2_S2, OUTPUT);
-    pinMode(PIN_LDRMUX2_S3, OUTPUT);
-    pinMode(PIN_LDRMUX1_SIG, INPUT);
-    pinMode(PIN_LDRMUX2_SIG, INPUT);
-
-    analogReadResolution(12);
-
-    // Turn off the debug LED
-    digitalWrite(PIN_LED_DEBUG, LOW);
-
-    // Initialise Serial
-    Serial.begin(TEENSY_MUX_BAUD_RATE);
-}
-
-// Sets an LDR MUX to select a specific channel
+// Sets an LDR MUX to select a specific channel.
 void selectLDRMUXChannel(LDRMUX mux, uint8_t channel) {
     switch (mux) {
     case MUX1:
@@ -44,16 +21,17 @@ void selectLDRMUXChannel(LDRMUX mux, uint8_t channel) {
         digitalWrite(PIN_LDRMUX2_S2, (channel >> 2) & 1);
         digitalWrite(PIN_LDRMUX2_S3, (channel >> 3) & 1);
     }
+    delayMicroseconds(50); // TODO: Figure out how long of a delay I need
 }
 
-// Reads the value of an LDR 0-indexed counting clockwise from 000º
+// Reads the value of an LDR 0-indexed counting clockwise from 000º.
 uint16_t readLDR(uint8_t index) {
     const auto real_index = LDR_MAP_REVERSE[index];
     selectLDRMUXChannel(real_index < 16 ? MUX1 : MUX2, real_index % 16);
     return analogRead(real_index < 16 ? PIN_LDRMUX1_SIG : PIN_LDRMUX2_SIG);
 }
 
-// Finds the position of the line
+// Finds the position of the line.
 void findLine() {
     // Get the matches (to the line)
     uint8_t matchCount = 0;
@@ -113,7 +91,7 @@ void findLine() {
         (smallerAngleDiff(clusterStartAngle, clusterEndAngle) / 180.0) * 100);
 }
 
-// CALIBRATION: Determines threshold values for the photodiodes
+// CALIBRATE: Determines threshold values for the photodiodes.
 void printLDRThresholds() {
     // min = green (field), max = white (line)
     uint16_t min[LDR_COUNT], max[LDR_COUNT];
@@ -138,7 +116,7 @@ void printLDRThresholds() {
     Serial.print("}\n");
 }
 
-// DEBUG: Prints detected line data
+// DEBUG: Prints detected line data.
 void printLDR() {
     findLine();
 
@@ -159,6 +137,40 @@ void printLDR() {
     Serial.printf("|\n");
 }
 
+// ------------------------------ MAIN CODE START ------------------------------
+void setup() {
+    // Turn on the debug LED
+    pinMode(PIN_LED_DEBUG, OUTPUT);
+    digitalWrite(PIN_LED_DEBUG, HIGH);
+
+    // Initialise Pins
+    pinMode(PIN_LDRMUX1_S0, OUTPUT);
+    pinMode(PIN_LDRMUX1_S1, OUTPUT);
+    pinMode(PIN_LDRMUX1_S2, OUTPUT);
+    pinMode(PIN_LDRMUX1_S3, OUTPUT);
+    pinMode(PIN_LDRMUX2_S0, OUTPUT);
+    pinMode(PIN_LDRMUX2_S1, OUTPUT);
+    pinMode(PIN_LDRMUX2_S2, OUTPUT);
+    pinMode(PIN_LDRMUX2_S3, OUTPUT);
+    pinMode(PIN_LDRMUX1_SIG, INPUT);
+    pinMode(PIN_LDRMUX2_SIG, INPUT);
+
+    analogReadResolution(12);
+
+    // Initialise Serial
+    Serial.begin(TEENSY_MUX_BAUD_RATE);
+#if DEBUG
+    Serial1.begin(DEBUG_BAUD_RATE);
+#endif
+    while (!Serial) delay(10);
+#if DEBUG
+    while (!Serial1) delay(10);
+#endif
+
+    // Turn off the debug LED
+    digitalWrite(PIN_LED_DEBUG, LOW);
+}
+
 void loop() {
     // Find the line
     findLine();
@@ -166,10 +178,10 @@ void loop() {
     // Send the line data over serial to Teensy
     uint8_t buf[sizeof(line)];
     memcpy(buf, &line, sizeof(line));
-
-    Serial.write(MUX_TX_SYNC_START_BYTE);
-    Serial.write(buf, sizeof(line));
-    Serial.write(MUX_TX_SYNC_END_BYTE);
+    sendPacket(Serial, buf, MUX_TX_PACKET_SIZE, MUX_TX_SYNC_START_BYTE,
+               MUX_TX_SYNC_END_BYTE);
 
     // TODO: Program a calibration mode
+    // printLDRThresholds();
 }
+// ------------------------------- MAIN CODE END -------------------------------

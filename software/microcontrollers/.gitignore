@@ -1,5 +1,8 @@
 # PlatformIO
 .pio
 
+# CMake
+build
+
 # Old files
 **/old/

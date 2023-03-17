@@ -1,7 +1,13 @@
 #ifndef STM32_MUX_CONFIG_H
 #define STM32_MUX_CONFIG_H
 
-#include <stm32_mux/lib/variant_generic.h>
+#include <cstdint>
+#include <stm32f103c_variant_generic.h>
+
+#define DEBUG false
+
+// Baud Rates
+#define DEBUG_BAUD_RATE 115200
 
 // Pins
 #define PIN_LED_DEBUG PA8
