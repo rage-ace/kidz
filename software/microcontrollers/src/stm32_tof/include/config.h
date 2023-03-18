@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <stm32f103c_variant_generic.h>
 
-#define DEBUG false
+// #define DEBUG
 
 // Baud Rates
 #define BLUETOOTH_BAUD_RATE 9600
@@ -35,7 +35,7 @@
 #define PIN_RIGHT_EYE PB1
 
 // Serial Ports
-#if DEBUG
+#ifdef DEBUG
     #define PIN_SERIAL1_RX PB7
     #define PIN_SERIAL1_TX PB6
 #endif

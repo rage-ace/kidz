@@ -1,7 +1,10 @@
 #ifndef TEENSY_CONFIG_H
 #define TEENSY_CONFIG_H
 
-#define DEBUG false
+#define DEBUG
+// #define DEBUG_MUX
+// #define DEBUG_IMU
+// #define DEBUG_TOF
 
 // Pins
 #define PIN_LED_DEBUG 13

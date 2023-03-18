@@ -82,22 +82,27 @@ void setup() {
     while (!MUX_SERIAL) delay(10);
     while (!IMU_SERIAL) delay(10);
     while (!TOF_SERIAL) delay(10);
-    // while (!CORAL_SERIAL) delay(10);
+    while (!CORAL_SERIAL) delay(10);
 
+#ifndef DEBUG_MUX
     // Wait for STM32 MUX to initialise
     Serial.println("Waiting for STM32 MUX to initialise...");
     MUXTXPayload muxTXPayload;
     while (!readPacket(MUX_SERIAL, &muxTXPayload, MUX_TX_PACKET_SIZE,
                        MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE))
         delay(10);
+#endif
 
+#ifndef DEBUG_TOF
     // Wait for STM32 TOF to initialise
     Serial.println("Waiting for STM32 TOF to initialise...");
     TOFTXPayload tofTXPayload;
     while (!readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
                        TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE))
         delay(10);
+#endif
 
+#ifndef DEBUG_IMU
     // Wait for STM32 IMU to initialise and get the bearing offset
     Serial.println("Waiting for STM32 IMU to initialise...");
     IMUTXPayload imuTXPayload;
@@ -107,6 +112,9 @@ void setup() {
     Serial.println("Waiting for IMU to stabilise...");
     delay(2000); // Wait for IMU to stabilise
     bearingOffset = imuTXPayload.bearing;
+#else
+    bearingOffset = 0;
+#endif
 
     // Turn off the debug LED
     Serial.println("Initialisation complete");
@@ -114,12 +122,15 @@ void setup() {
 }
 
 void loop() {
+#ifndef DEBUG_MUX
     // Read line data from STM32 MUX
     MUXTXPayload muxTXPayload;
     if (readPacket(MUX_SERIAL, &muxTXPayload, MUX_TX_PACKET_SIZE,
                    MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE))
         line = muxTXPayload.line;
+#endif
 
+#ifndef DEBUG_IMU
     // Read attitude data from STM32 IMU
     IMUTXPayload imuTXPayload;
     if (readPacket(IMU_SERIAL, &imuTXPayload, IMU_TX_PACKET_SIZE,
@@ -127,7 +138,9 @@ void loop() {
         const int32_t _bearing = imuTXPayload.bearing - bearingOffset;
         bearing = _bearing >= 0 ? _bearing : _bearing + 36000;
     }
+#endif
 
+#ifndef DEBUG_TOF
     // Read bounds data from STM32 TOF
     TOFTXPayload tofTXPayload;
     if (readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
@@ -135,6 +148,7 @@ void loop() {
         bounds = tofTXPayload.bounds;
         bluetoothInboundPayload = tofTXPayload.bluetoothInboundPayload;
     }
+#endif
 
     // Read ball data from coral
     // TODO
@@ -162,6 +176,22 @@ void loop() {
     // ----------------------------- END CALIBRATE -----------------------------
 
     // ------------------------------ START DEBUG ------------------------------
+#ifdef DEBUG_MUX
+    // Redirect MUX Serial to monitor
+    if (MUX_SERIAL.available() > 0) Serial.print(char(MUX_SERIAL.read()));
+#endif
+
+#ifdef DEBUG_IMU
+    // Redirect IMU Serial to monitor
+    if (IMU_SERIAL.available() > 0) Serial.print(char(IMU_SERIAL.read()));
+#endif
+
+#ifdef DEBUG_TOF
+    // Redirect TOF Serial to monitor
+    if (TOF_SERIAL.available() > 0) Serial.print(char(TOF_SERIAL.read()));
+#endif
+
+#ifdef DEBUG
     // Print debug data
     if (line.exists())
         Serial.printf("Line %03d.%02dº %01d.%02d | ", line.bearing / 100,
@@ -193,14 +223,8 @@ void loop() {
     Serial.println();
     delay(100);
 
-    // // Redirect MUX Serial to monitor
-    // if (MUX_SERIAL.available() > 0) Serial.print(char(MUX_SERIAL.read()));
-
-    // // Redirect IMU Serial to monitor
-    // if (IMU_SERIAL.available() > 0) Serial.print(char(IMU_SERIAL.read()));
-
-    // // Redirect TOF Serial to monitor
-    // if (TOF_SERIAL.available() > 0) Serial.print(char(TOF_SERIAL.read()));
+    // // Print loop time
+    // printLoopTime();
 
     // Test motors
     movement.angle = 0;
@@ -209,6 +233,7 @@ void loop() {
 
     // // Line Track
     // TODO
+#endif
     // ------------------------------- END DEBUG -------------------------------
 
     // Actuate outputs

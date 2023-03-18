@@ -96,3 +96,33 @@ void wipeEEPROM() {
     }
     Serial.println("Done");
 }
+
+uint32_t _time = 0;
+uint32_t _min_delta = UINT32_MAX;
+uint32_t _max_delta = 0;
+uint64_t _sum_delta = 0;
+uint16_t _iter = 0;
+// Get loop time in µs.
+uint32_t printLoopTime(uint16_t sampleCount) {
+    const auto now = micros();
+    const auto delta = micros() - _time;
+    _time = now;
+    _min_delta = min(_min_delta, delta);
+    _max_delta = max(_max_delta, delta);
+    _sum_delta += delta;
+    ++_iter;
+
+    if (_iter == sampleCount) {
+        Serial.printf(
+            "Loop time (µs): mean=%5u (min=%5u, max=%5u), samples=%4u\n",
+            (uint32_t)roundf((float)_sum_delta / (float)_iter), _min_delta,
+            _max_delta, _iter);
+        _time = micros(); // Update time as Serial.print() took some time
+        _min_delta = UINT32_MAX;
+        _max_delta = 0;
+        _sum_delta = 0;
+        _iter = 0;
+    }
+
+    return delta;
+}

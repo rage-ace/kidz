@@ -21,7 +21,7 @@ void selectLDRMUXChannel(LDRMUX mux, uint8_t channel) {
         digitalWrite(PIN_LDRMUX2_S2, (channel >> 2) & 1);
         digitalWrite(PIN_LDRMUX2_S3, (channel >> 3) & 1);
     }
-    delayMicroseconds(50); // TODO: Figure out how long of a delay I need
+    delayMicroseconds(1); // TODO: Figure out how long of a delay I need
 }
 
 // Reads the value of an LDR 0-indexed counting clockwise from 000º.
@@ -160,11 +160,11 @@ void setup() {
 
     // Initialise serial
     TEENSY_SERIAL.begin(TEENSY_MUX_BAUD_RATE);
-#if DEBUG
+#ifdef DEBUG
     DEBUG_SERIAL.begin(DEBUG_BAUD_RATE);
 #endif
     while (!TEENSY_SERIAL) delay(10);
-#if DEBUG
+#ifdef DEBUG
     while (!DEBUG_SERIAL) delay(10);
 #endif
 
@@ -184,5 +184,10 @@ void loop() {
 
     // TODO: Program a calibration mode
     // printLDRThresholds();
+
+    // ------------------------------ START DEBUG ------------------------------
+    // // Print loop time
+    // printLoopTime();
+    // ------------------------------- END DEBUG -------------------------------
 }
 // ------------------------------- MAIN CODE END -------------------------------

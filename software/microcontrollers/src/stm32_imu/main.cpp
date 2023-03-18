@@ -105,11 +105,11 @@ void setup() {
 
     // Initialise serial
     TEENSY_SERIAL.begin(TEENSY_IMU_BAUD_RATE);
-#if DEBUG
+#ifdef DEBUG
     DEBUG_SERIAL.begin(DEBUG_BAUD_RATE);
 #endif
     while (!TEENSY_SERIAL) delay(10);
-#if DEBUG
+#ifdef DEBUG
     while (!DEBUG_SERIAL) delay(10);
 #endif
 
@@ -119,7 +119,7 @@ void setup() {
 
     // Initialise IMU
     if (!bno.begin()) {
-#if DEBUG
+#ifdef DEBUG
         DEBUG_SERIAL.println("IMU not found");
 #endif
         // Blink the debug LED if IMU not found
@@ -177,6 +177,9 @@ void loop() {
     // // Print payload
     // TEENSY_SERIAL.printf("bearing: %3d.%02dº\n", bearing / 100, bearing %
     // 100);
+
+    // // Print loop time
+    // printLoopTime(2000);
 
     // ------------------------------- END DEBUG -------------------------------
 }

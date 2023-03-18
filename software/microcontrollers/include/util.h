@@ -19,4 +19,6 @@ void scanI2C(Stream &serial, TwoWire wire);
 
 void wipeEEPROM();
 
+uint32_t printLoopTime(uint16_t sampleCount = 50U);
+
 #endif

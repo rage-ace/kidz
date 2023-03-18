@@ -30,12 +30,12 @@ void setup() {
     // Initialise serial
     TEENSY_SERIAL.begin(TEENSY_TOF_BAUD_RATE);
     BLUETOOTH_SERIAL.begin(BLUETOOTH_BAUD_RATE);
-#if DEBUG
+#ifdef DEBUG
     DEBUG_SERIAL.begin(DEBUG_BAUD_RATE);
 #endif
     while (!TEENSY_SERIAL) delay(10);
     while (!BLUETOOTH_SERIAL) delay(10);
-#if DEBUG
+#ifdef DEBUG
     while (!DEBUG_SERIAL) delay(10);
 #endif
 
@@ -58,7 +58,7 @@ void setup() {
         tofs[i].setTimeout(500);
         if (!tofs[i].init()) { // NOTE: This fails if the sensor is already
                                // initialised
-#if DEBUG
+#ifdef DEBUG
             DEBUG_SERIAL.printf("Failed to detect and initialize sensor %d", i);
 #endif
             while (1) {}
@@ -116,6 +116,9 @@ void loop() {
     // // Print payload
     // TEENSY_SERIAL.printf("F: %4d B: %4d L: %4d R: %4d\n", bounds.front,
     //                      bounds.back, bounds.left, bounds.right);
+
+    // // Print loop time
+    // printLoopTime();
 
     // ------------------------------- END DEBUG -------------------------------
 }

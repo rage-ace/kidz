@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+// NULL values
 #define UINT16_NO_LINE UINT16_MAX
 #define UINT8_NO_LINE  UINT8_MAX
 #define NO_BEARING     UINT16_MAX
@@ -71,6 +72,7 @@ struct TOFRXPayload {
     BluetoothPayload bluetoothOutboundPayload;
 };
 
+// Shared serial information
 #define MONITOR_BAUD_RATE      115200
 #define TEENSY_MUX_BAUD_RATE   115200
 #define TEENSY_IMU_BAUD_RATE   115200
@@ -96,5 +98,12 @@ struct TOFRXPayload {
 #define TOF_RX_PACKET_SIZE     sizeof(TOFRXPayload) + 2U
 #define TOF_RX_SYNC_START_BYTE 0b11010110
 #define TOF_RX_SYNC_END_BYTE   0b00110010
+
+// Loop times (measured on 2023-03-18)
+// #define _TEENSY_LOOP_TIME 0U // in µs, default:   260 (min=  172, max=  348)
+// #define _MUX_LOOP_TIME    0U // in µs, default:  2787 (min= 2783, max= 2860)
+// #define _IMU_LOOP_TIME    0U // in µs, default:  1262 (min=  917, max= 2238)
+// #define _TOF_LOOP_TIME    0U // in µs, default: 30972 (min=25295, max=31470)
+// #define _CORAL_LOOP_TIME  0U // in µs
 
 #endif
