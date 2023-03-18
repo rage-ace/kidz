@@ -110,10 +110,10 @@ void printLDRThresholds() {
     }
 
     // Print the thresholds (averages of min and max)
-    Serial.print("Thresholds: {");
+    TEENSY_SERIAL.print("Thresholds: {");
     for (uint8_t i = 0; i < LDR_COUNT; ++i)
-        Serial.printf("%d, ", (min[i] + max[i]) >> 1);
-    Serial.print("}\n");
+        TEENSY_SERIAL.printf("%d, ", (min[i] + max[i]) >> 1);
+    TEENSY_SERIAL.print("}\n");
 }
 
 // DEBUG: Prints detected line data.
@@ -124,17 +124,18 @@ void printLDR() {
     for (uint8_t i = 0; i < LDR_COUNT; ++i) values[i] = readLDR(i);
 
     if (line.bearing != UINT16_NO_LINE) {
-        Serial.printf("%03d.%02dº %01d.%02d |", line.bearing / 100,
-                      line.bearing % 100, line.size / 100, line.size % 100);
+        TEENSY_SERIAL.printf("%03d.%02dº %01d.%02d |", line.bearing / 100,
+                             line.bearing % 100, line.size / 100,
+                             line.size % 100);
     } else {
-        Serial.printf("             |");
+        TEENSY_SERIAL.printf("             |");
     }
     for (uint8_t i = 0; i < LDR_COUNT >> 1; ++i)
-        Serial.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
-    Serial.printf("|");
+        TEENSY_SERIAL.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
+    TEENSY_SERIAL.printf("|");
     for (uint8_t i = LDR_COUNT >> 1; i < LDR_COUNT; ++i)
-        Serial.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
-    Serial.printf("|\n");
+        TEENSY_SERIAL.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
+    TEENSY_SERIAL.printf("|\n");
 }
 
 // ------------------------------ MAIN CODE START ------------------------------
@@ -143,7 +144,7 @@ void setup() {
     pinMode(PIN_LED_DEBUG, OUTPUT);
     digitalWrite(PIN_LED_DEBUG, HIGH);
 
-    // Initialise Pins
+    // Initialise pins
     pinMode(PIN_LDRMUX1_S0, OUTPUT);
     pinMode(PIN_LDRMUX1_S1, OUTPUT);
     pinMode(PIN_LDRMUX1_S2, OUTPUT);
@@ -157,14 +158,14 @@ void setup() {
 
     analogReadResolution(12);
 
-    // Initialise Serial
-    Serial.begin(TEENSY_MUX_BAUD_RATE);
+    // Initialise serial
+    TEENSY_SERIAL.begin(TEENSY_MUX_BAUD_RATE);
 #if DEBUG
-    Serial1.begin(DEBUG_BAUD_RATE);
+    DEBUG_SERIAL.begin(DEBUG_BAUD_RATE);
 #endif
-    while (!Serial) delay(10);
+    while (!TEENSY_SERIAL) delay(10);
 #if DEBUG
-    while (!Serial1) delay(10);
+    while (!DEBUG_SERIAL) delay(10);
 #endif
 
     // Turn off the debug LED
@@ -176,9 +177,9 @@ void loop() {
     findLine();
 
     // Send the line data over serial to Teensy
-    uint8_t buf[sizeof(line)];
+    uint8_t buf[sizeof(MUXTXPayload)];
     memcpy(buf, &line, sizeof(line));
-    sendPacket(Serial, buf, MUX_TX_PACKET_SIZE, MUX_TX_SYNC_START_BYTE,
+    sendPacket(TEENSY_SERIAL, buf, MUX_TX_PACKET_SIZE, MUX_TX_SYNC_START_BYTE,
                MUX_TX_SYNC_END_BYTE);
 
     // TODO: Program a calibration mode

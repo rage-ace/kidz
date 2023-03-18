@@ -5,11 +5,12 @@
 #include "util.h"
 
 // State
-struct Line line;     // Read from STM32 MUX
-uint16_t bearing = 0; // Read from STM32 IMU
-uint16_t bearingOffset;
+struct Line line;       // Read from STM32 MUX
+uint16_t bearing = 0;   // Read from STM32 IMU, 000(.)00° to 359(.)99°
+uint16_t bearingOffset; // Reset on Teensy init
+Boundary boundary;      // Read from STM32 TOF, 000(.)0 cm to 400(.)0 cm
 struct Movement {
-    float angle = 0;             // 0º to 360º
+    float angle = 0;             // 0.0º to 360.0º
     int16_t speed = 0;           // 50 to 1024
     int16_t angularVelocity = 0; // 200 to 1024
 } movement;
@@ -49,7 +50,7 @@ void setup() {
     pinMode(PIN_LED_DEBUG, OUTPUT);
     digitalWriteFast(PIN_LED_DEBUG, HIGH);
 
-    // Initialise Pins
+    // Initialise pins
     pinMode(PIN_MOTOR_FL_DIR, OUTPUT);
     pinMode(PIN_MOTOR_FR_DIR, OUTPUT);
     pinMode(PIN_MOTOR_BL_DIR, OUTPUT);
@@ -67,7 +68,7 @@ void setup() {
     // analogWriteFrequency(PIN_MOTOR_BL_PWM, 36621);
     // analogWriteFrequency(PIN_MOTOR_BR_PWM, 36621);
 
-    // Initialise Serial
+    // Initialise serial
     Serial.begin(MONITOR_BAUD_RATE);
     MUX_SERIAL.begin(TEENSY_MUX_BAUD_RATE);
     IMU_SERIAL.begin(TEENSY_IMU_BAUD_RATE);
@@ -76,7 +77,7 @@ void setup() {
     while (!Serial) delay(10);
     while (!MUX_SERIAL) delay(10);
     while (!IMU_SERIAL) delay(10);
-    // while (!TOF_SERIAL) delay(10);
+    while (!TOF_SERIAL) delay(10);
     // while (!CORAL_SERIAL) delay(10);
 
     // Wait for STM32 MUX to initialise
@@ -85,13 +86,12 @@ void setup() {
                        MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE))
         delay(10);
 
-    Serial.println("IMU");
-
     // Wait for STM32 IMU to initialise and get the bearing offset
     IMUTXPayload imuTXPayload;
     while (!readPacket(IMU_SERIAL, &imuTXPayload, IMU_TX_PACKET_SIZE,
                        IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE))
         delay(10);
+    delay(1000); // Wait for IMU to stabilise
     bearingOffset = imuTXPayload.bearing;
 
     // Turn off the debug LED
@@ -111,6 +111,13 @@ void loop() {
                    IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE)) {
         const int32_t _bearing = imuTXPayload.bearing - bearingOffset;
         bearing = _bearing >= 0 ? _bearing : _bearing + 36000;
+    }
+
+    // Read boundary data from STM32 TOF
+    TOFTXPayload tofTXPayload;
+    if (readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
+                   TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE)) {
+        boundary = tofTXPayload.boundary;
     }
 
     // Read ball data from coral
@@ -139,21 +146,44 @@ void loop() {
     // ----------------------------- END CALIBRATE -----------------------------
 
     // ------------------------------ START DEBUG ------------------------------
-    // // Print debug data
-    // if (line.exists()) {
-    //     Serial.printf("Line %03d.%02dº %01d.%02d | ", line.bearing / 100,
-    //                   line.bearing % 100, line.size / 100, line.size % 100);
-    // } else {
-    //     Serial.printf("Line             | ");
-    // }
-    // Serial.printf("Bearing %03d.%02dº\n", bearing / 100, bearing % 100);
-    // delay(100);
+    // Print debug data
+    if (line.exists())
+        Serial.printf("Line %03d.%02dº %01d.%02d | ", line.bearing / 100,
+                      line.bearing % 100, line.size / 100, line.size % 100);
+    else
+        Serial.printf("Line             | ");
+    if (bearing != NO_BEARING)
+        Serial.printf("Bearing %03d.%02dº | ", bearing / 100, bearing % 100);
+    else
+        Serial.printf("Bearing          | ");
+    Serial.print("Boundary ");
+    if (boundary.front != NO_BOUNDARY)
+        Serial.printf("F: %4d ", boundary.front);
+    else
+        Serial.printf("F:      ");
+    if (boundary.back != NO_BOUNDARY)
+        Serial.printf("B: %4d ", boundary.back);
+    else
+        Serial.printf("B:      ");
+    if (boundary.left != NO_BOUNDARY)
+        Serial.printf("L: %4d ", boundary.left);
+    else
+        Serial.printf("L:      ");
+    if (boundary.right != NO_BOUNDARY)
+        Serial.printf("R: %4d ", boundary.right);
+    else
+        Serial.printf("R:      ");
+    Serial.println();
+    delay(100);
 
     // // Redirect MUX Serial to monitor
     // if (MUX_SERIAL.available() > 0) Serial.print(char(MUX_SERIAL.read()));
 
     // // Redirect IMU Serial to monitor
     // if (IMU_SERIAL.available() > 0) Serial.print(char(IMU_SERIAL.read()));
+
+    // // Redirect TOF Serial to monitor
+    // if (TOF_SERIAL.available() > 0) Serial.print(char(TOF_SERIAL.read()));
 
     // Test motors
     movement.angle = 0;

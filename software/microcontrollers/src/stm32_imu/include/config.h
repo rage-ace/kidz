@@ -9,7 +9,7 @@
 #define DEBUG_BAUD_RATE 115200
 
 // Pins
-#define PIN_LED_DEBUG PA8
+#define PIN_LED_DEBUG PC13
 #define PIN_RX_DEBUG  PB7
 #define PIN_TX_DEBUG  PB6
 
@@ -18,6 +18,9 @@
 
 #define PIN_SDA_IMU PB9
 #define PIN_SCL_IMU PB8
+
+#define TEENSY_SERIAL Serial
+#define DEBUG_SERIAL  Serial1
 
 // EEPROM Addresses
 #define EEPROM_ADDRESS_HAS_OFFSETS 0x000

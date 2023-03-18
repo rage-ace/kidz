@@ -31,6 +31,9 @@
 #define PIN_LDRMUX2_S2  PA5
 #define PIN_LDRMUX2_S3  PA4
 
+#define TEENSY_SERIAL Serial
+#define DEBUG_SERIAL  Serial1
+
 // Light Sensor Config
 enum LDRMUX { MUX1 = 0x00, MUX2 = 0x01 };
 

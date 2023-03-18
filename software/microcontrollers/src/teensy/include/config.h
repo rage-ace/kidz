@@ -6,11 +6,6 @@
 // Pins
 #define PIN_LED_DEBUG 13
 
-#define CORAL_SERIAL Serial1
-#define MUX_SERIAL   Serial2
-#define TOF_SERIAL   Serial3
-#define IMU_SERIAL   Serial4
-
 #define PIN_RX_CORAL 1 // Serial1
 #define PIN_TX_CORAL 0
 
@@ -36,6 +31,11 @@
 #define PIN_DRIBBLER_PWM 18
 #define PIN_LIGHTGATE    22
 #define PIN_KICKER       23
+
+#define CORAL_SERIAL Serial1
+#define MUX_SERIAL   Serial2
+#define TOF_SERIAL   Serial3
+#define IMU_SERIAL   Serial4
 
 // Movement Config
 
