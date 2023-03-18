@@ -45,8 +45,8 @@ void findLine() {
 
     // No match (to the line) was found
     if (matchCount == 0) {
-        line.bearing = UINT16_NO_LINE;
-        line.size = UINT8_NO_LINE;
+        line.angle = NO_LINE_INT16;
+        line.size = NO_LINE_UINT8;
         return;
     }
 
@@ -71,8 +71,8 @@ void findLine() {
 
     // No cluster was found
     if (clusterStart == LDR_COUNT) {
-        line.bearing = UINT16_NO_LINE;
-        line.size = UINT8_NO_LINE;
+        line.angle = NO_LINE_INT16;
+        line.size = NO_LINE_UINT8;
         return;
     }
 
@@ -80,15 +80,15 @@ void findLine() {
     const auto clusterStartAngle = LDR_BEARINGS[clusterStart];
     const auto clusterEndAngle = LDR_BEARINGS[clusterEnd];
     const auto clusterMidpoint =
-        angleMidpoint(clusterStartAngle, clusterEndAngle);
-    const auto rawLineBearing = clusterMidpoint - 90.0;
+        bearingMidpoint(clusterStartAngle, clusterEndAngle);
+    const auto rawLineBearing = clipBearing(clusterMidpoint - 90.0);
 
-    // Sets lineAngle as the midpoint of cluster ends
-    line.bearing = roundf(
-        (rawLineBearing > 180 ? 360 - rawLineBearing : rawLineBearing) * 100);
+    // Sets lineAngle as perpendicular to angle of the midpoint of cluster ends
+    line.angle = bearingToAngle(rawLineBearing);
     // Sets lineSize as the ratio of the cluster size to 180°
     line.size = roundf(
-        (smallerAngleDiff(clusterStartAngle, clusterEndAngle) / 180.0) * 100);
+        (smallerBearingDiff(clusterStartAngle, clusterEndAngle) / 180.0F) *
+        100);
 }
 
 // CALIBRATE: Determines threshold values for the photodiodes.
@@ -123,12 +123,12 @@ void printLDR() {
     uint16_t values[LDR_COUNT];
     for (uint8_t i = 0; i < LDR_COUNT; ++i) values[i] = readLDR(i);
 
-    if (line.bearing != UINT16_NO_LINE) {
-        TEENSY_SERIAL.printf("%03d.%02dº %01d.%02d |", line.bearing / 100,
-                             line.bearing % 100, line.size / 100,
+    if (line.exists()) {
+        TEENSY_SERIAL.printf("%4d.%02dº %01d.%02d |", line.angle / 100,
+                             abs(line.angle % 100), line.size / 100,
                              line.size % 100);
     } else {
-        TEENSY_SERIAL.printf("             |");
+        TEENSY_SERIAL.printf("              |");
     }
     for (uint8_t i = 0; i < LDR_COUNT >> 1; ++i)
         TEENSY_SERIAL.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");

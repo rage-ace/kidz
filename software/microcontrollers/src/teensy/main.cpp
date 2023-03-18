@@ -6,29 +6,29 @@
 #include "util.h"
 
 // State
-struct Line line;       // Read from STM32 MUX
-uint16_t bearing = 0;   // Read from STM32 IMU, 000(.)00° to 359(.)99°
-uint16_t bearingOffset; // Reset on Teensy init
-Bounds bounds;          // Read from STM32 TOF, 000(.)0 cm to 400(.)0 cm
+struct Line line;         // Read from STM32 MUX
+int16_t robotAngle = 0;   // Read from STM32 IMU, -179(.)99° to +180(.)00°
+int16_t robotAngleOffset; // Reset on Teensy init
+Bounds bounds;            // Read from STM32 TOF, 000(.)0 cm to 400(.)0 cm
 BluetoothPayload bluetoothInboundPayload; // Read from STM32 TOF
 struct Movement {
-    int16_t angle = 0;           // -180(.)00º to +180(.)00º
+    int16_t angle = 0;           // -179(.)99º to +180(.)00º
     int16_t speed = 0;           // ±50 to ±1024
     int16_t angularVelocity = 0; // ±200 to ±4096
 } movement;
 
 // Controllers
-PIDController bearingController =
+PIDController robotAngleController =
     PIDController(KP_BEARING, KI_BEARING, KD_BEARING, // Gains
                   -4096, 4096,                        // angularVelocity bounds
-                  0                                   // Target bearing
+                  0                                   // Target angle
     );
 
 // Writes the current movement data to the motors.
 void drive() {
     // Convert polar to cartesian
-    const auto x = sinf(movement.angle * DEG_TO_RAD);
-    const auto y = cosf(movement.angle * DEG_TO_RAD);
+    const auto x = sinf((float)movement.angle / 100 * DEG_TO_RAD);
+    const auto y = cosf((float)movement.angle / 100 * DEG_TO_RAD);
 
     // Compute the speeds of the individual motors
     const auto transformSpeed = [](float speed, float angularComponent) {
@@ -57,13 +57,48 @@ void drive() {
                 constrain(abs(BRSpeed), DRIVE_STALL_SPEED, DRIVE_MAX_SPEED));
 }
 
+void waitForSubprocessorInit() {
+#ifndef DEBUG_MUX
+    // Wait for STM32 MUX to initialise
+    Serial.println("Waiting for STM32 MUX to initialise...");
+    MUXTXPayload muxTXPayload;
+    while (!readPacket(MUX_SERIAL, &muxTXPayload, MUX_TX_PACKET_SIZE,
+                       MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE))
+        delay(10);
+#endif
+
+#ifndef DEBUG_TOF
+    // Wait for STM32 TOF to initialise
+    Serial.println("Waiting for STM32 TOF to initialise...");
+    TOFTXPayload tofTXPayload;
+    while (!readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
+                       TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE))
+        delay(10);
+#endif
+
+#ifndef DEBUG_IMU
+    // Wait for STM32 IMU to initialise and get the angle offset
+    Serial.println("Waiting for STM32 IMU to initialise...");
+    IMUTXPayload imuTXPayload;
+    while (!readPacket(IMU_SERIAL, &imuTXPayload, IMU_TX_PACKET_SIZE,
+                       IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE))
+        delay(10);
+    Serial.println("Waiting for IMU to stabilise...");
+    delay(3000); // Wait for IMU to stabilise
+    robotAngleOffset = imuTXPayload.robotAngle;
+#else
+    robotAngleOffset = 0;
+#endif
+}
+
 void readSensors() {
 #ifndef DEBUG_MUX
     // Read line data from STM32 MUX
     MUXTXPayload muxTXPayload;
     if (readPacket(MUX_SERIAL, &muxTXPayload, MUX_TX_PACKET_SIZE,
-                   MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE))
+                   MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE)) {
         line = muxTXPayload.line;
+    }
 #endif
 
 #ifndef DEBUG_IMU
@@ -71,8 +106,7 @@ void readSensors() {
     IMUTXPayload imuTXPayload;
     if (readPacket(IMU_SERIAL, &imuTXPayload, IMU_TX_PACKET_SIZE,
                    IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE)) {
-        const int32_t _bearing = imuTXPayload.bearing - bearingOffset;
-        bearing = _bearing >= 0 ? _bearing : _bearing + 36000;
+        robotAngle = clipAngle(imuTXPayload.robotAngle - robotAngleOffset);
     }
 #endif
 
@@ -115,8 +149,8 @@ void performCalibration() {
             drive();
 
             // Update angle counter
-            ++angle;
-            if (angle == 180) angle = -179;
+            angle += 100;
+            if (angle == 18000) angle = -17900;
         }
     }
 #endif
@@ -139,40 +173,42 @@ void performDebug() {
 #endif
 
 #ifdef DEBUG_TEENSY
-    // // Print debug data
-    // if (line.exists())
-    //     Serial.printf("Line %03d.%02dº %01d.%02d | ", line.bearing / 100,
-    //                   line.bearing % 100, line.size / 100, line.size % 100);
-    // else
-    //     Serial.printf("Line             | ");
-    // if (bearing != NO_BEARING)
-    //     Serial.printf("Bearing %03d.%02dº | ", bearing / 100, bearing % 100);
-    // else
-    //     Serial.printf("Bearing          | ");
-    // Serial.print("Bounds ");
-    // if (bounds.front != NO_BOUNDS)
-    //     Serial.printf("F: %4d ", bounds.front);
-    // else
-    //     Serial.printf("F:      ");
-    // if (bounds.back != NO_BOUNDS)
-    //     Serial.printf("B: %4d ", bounds.back);
-    // else
-    //     Serial.printf("B:      ");
-    // if (bounds.left != NO_BOUNDS)
-    //     Serial.printf("L: %4d ", bounds.left);
-    // else
-    //     Serial.printf("L:      ");
-    // if (bounds.right != NO_BOUNDS)
-    //     Serial.printf("R: %4d | ", bounds.right);
-    // else
-    //     Serial.printf("R:      | ");
-    // Serial.printf("BT Inbound: 0x%02X | ", bluetoothInboundPayload.testByte);
-    // Serial.println();
-    // delay(100);
+    // Print debug data
+    if (line.exists())
+        Serial.printf("Line %4d.%02dº %01d.%02d | ", line.angle / 100,
+                      abs(line.angle % 100), line.size / 100, line.size % 100);
+    else
+        Serial.printf("Line             | ");
+    if (robotAngle != NO_ANGLE)
+        Serial.printf("Robot Angle %4d.%02dº | ", robotAngle / 100,
+                      abs(robotAngle % 100));
+    else
+        Serial.printf("Robot Angle          | ");
+    Serial.print("Bounds ");
+    if (bounds.front != NO_BOUNDS)
+        Serial.printf("F: %4d ", bounds.front);
+    else
+        Serial.printf("F:      ");
+    if (bounds.back != NO_BOUNDS)
+        Serial.printf("B: %4d ", bounds.back);
+    else
+        Serial.printf("B:      ");
+    if (bounds.left != NO_BOUNDS)
+        Serial.printf("L: %4d ", bounds.left);
+    else
+        Serial.printf("L:      ");
+    if (bounds.right != NO_BOUNDS)
+        Serial.printf("R: %4d | ", bounds.right);
+    else
+        Serial.printf("R:      | ");
+    Serial.printf("BT Inbound: 0x%02X | ", bluetoothInboundPayload.testByte);
+    Serial.println();
+    delay(100);
 
-    // Print controller info
-    Serial.printf("Bearing: %3d.%02dº, Angular Velocity: %4d\n", bearing / 100,
-                  abs(bearing) % 100, movement.angularVelocity);
+    // // Print controller info
+    // Serial.printf("Robot Angle: %4d.%02dº, Angular Velocity: %4d\n",
+    //               robotAngle / 100, abs(robotAngle) % 100,
+    //               movement.angularVelocity);
 
     // // Print loop time
     // printLoopTime();
@@ -226,37 +262,7 @@ void setup() {
     while (!CORAL_SERIAL) delay(10);
 
 #ifndef CALIBRATE // Don't wait for everything to initialise if calibrating
-    #ifndef DEBUG_MUX
-    // Wait for STM32 MUX to initialise
-    Serial.println("Waiting for STM32 MUX to initialise...");
-    MUXTXPayload muxTXPayload;
-    while (!readPacket(MUX_SERIAL, &muxTXPayload, MUX_TX_PACKET_SIZE,
-                       MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE))
-        delay(10);
-    #endif
-
-    #ifndef DEBUG_TOF
-    // Wait for STM32 TOF to initialise
-    Serial.println("Waiting for STM32 TOF to initialise...");
-    TOFTXPayload tofTXPayload;
-    while (!readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
-                       TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE))
-        delay(10);
-    #endif
-
-    #ifndef DEBUG_IMU
-    // Wait for STM32 IMU to initialise and get the bearing offset
-    Serial.println("Waiting for STM32 IMU to initialise...");
-    IMUTXPayload imuTXPayload;
-    while (!readPacket(IMU_SERIAL, &imuTXPayload, IMU_TX_PACKET_SIZE,
-                       IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE))
-        delay(10);
-    Serial.println("Waiting for IMU to stabilise...");
-    delay(2000); // Wait for IMU to stabilise
-    bearingOffset = imuTXPayload.bearing;
-    #else
-    bearingOffset = 0;
-    #endif
+    waitForSubprocessorInit(); // this is obviously blocking
 #endif
 
     // Turn off the debug LED
@@ -274,9 +280,7 @@ void loop() {
     readSensors();
 
     // Keep straight
-    const int16_t robotAngle =
-        bearing > 18000 ? (int32_t)bearing - 36000 : bearing;
-    movement.angularVelocity = bearingController.advance(robotAngle);
+    movement.angularVelocity = robotAngleController.advance(robotAngle);
 
     // Follow the ball
     // TODO

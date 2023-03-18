@@ -4,16 +4,16 @@
 #include <stdint.h>
 
 // NULL values
-#define UINT16_NO_LINE UINT16_MAX
-#define UINT8_NO_LINE  UINT8_MAX
-#define NO_BEARING     UINT16_MAX
-#define NO_BOUNDS      UINT16_MAX
+#define NO_LINE_INT16 INT16_MAX
+#define NO_LINE_UINT8 UINT8_MAX
+#define NO_ANGLE      INT16_MAX
+#define NO_BOUNDS     UINT16_MAX
 
 struct Line {
-    uint16_t bearing = UINT16_NO_LINE; // 0(.)00° to 359(.)99°
-    uint8_t size = UINT8_NO_LINE;      // 0(.)00 to 1(.)00
+    int16_t angle = NO_LINE_INT16; // -179(.)99° to 180(.)00°
+    uint8_t size = NO_LINE_UINT8;  // 0(.)00 to 1(.)00
 
-    bool exists() { return bearing != UINT16_NO_LINE && size != UINT8_NO_LINE; }
+    bool exists() { return angle != NO_LINE_INT16 && size != NO_LINE_UINT8; }
 };
 
 struct Bounds {
@@ -56,7 +56,7 @@ struct MUXTXPayload {
 };
 
 struct IMUTXPayload {
-    uint16_t bearing = NO_BEARING;
+    int16_t robotAngle = NO_ANGLE;
 };
 
 struct IMURXPayload {

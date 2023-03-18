@@ -8,16 +8,17 @@
 #include "util.h"
 
 // State
-uint16_t bearing;
+int16_t robotAngle;
 
 // IMU (Sensor ID, I2C Address, I2C Wire)
 Adafruit_BNO055 bno = Adafruit_BNO055(55, I2C_ADDRESS_BNO055, &Wire);
 
-// Reads the current bearing from the IMU.
-uint16_t readBearing() {
+// Reads the current robot angle from the IMU.
+int16_t readRobotAngle() {
     sensors_event_t eulerAngles;
     bno.getEvent(&eulerAngles, Adafruit_BNO055::VECTOR_EULER);
-    return roundf(eulerAngles.orientation.x * 100);
+    const auto bearing = roundf(eulerAngles.orientation.x * 100);
+    return bearing > 180 ? bearing - 360 : bearing;
 }
 
 // DEBUG: Prints all data read from IMU sensors.
@@ -157,11 +158,11 @@ void setup() {
 
 void loop() {
     // Read IMU data
-    bearing = readBearing();
+    robotAngle = readRobotAngle();
 
     // Send the IMU data over serial to Teensy
     uint8_t buf[sizeof(IMUTXPayload)];
-    memcpy(buf, &bearing, sizeof(bearing));
+    memcpy(buf, &robotAngle, sizeof(robotAngle));
     sendPacket(TEENSY_SERIAL, buf, IMU_TX_PACKET_SIZE, IMU_TX_SYNC_START_BYTE,
                IMU_TX_SYNC_END_BYTE);
 
