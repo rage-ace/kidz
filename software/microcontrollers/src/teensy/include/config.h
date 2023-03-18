@@ -45,6 +45,7 @@
 // Should ideally be <=1.0F to preserve resolution
 #define ANGULAR_VELOCITY_MULTIPLIER 0.25F
 #define DRIVE_STALL_SPEED           50
+#define DRIVE_MAX_SPEED             1024
 
 // #define MOVE_ABOUT_BALL_MULTIPLIER 13.0
 
@@ -53,5 +54,10 @@
 // #define BEGIN_ENTERING_LINE_STRENGTH 0.5
 // #define ENTER_LINE_SPEED_MULTIPLIER  150.0
 // #define ENTER_LINE_MAX_SPEED         200
+
+// PID Gains
+#define KP_BEARING 0.1F
+#define KI_BEARING 0.0F
+#define KD_BEARING 0.0F
 
 #endif

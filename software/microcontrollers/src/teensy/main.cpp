@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "config.h"
+#include "pid.h"
 #include "teensy/include/config.h"
 #include "util.h"
 
@@ -11,10 +12,17 @@ uint16_t bearingOffset; // Reset on Teensy init
 Bounds bounds;          // Read from STM32 TOF, 000(.)0 cm to 400(.)0 cm
 BluetoothPayload bluetoothInboundPayload; // Read from STM32 TOF
 struct Movement {
-    float angle = 0;             // 0.0º to 360.0º
-    int16_t speed = 0;           // 50 to 1024
-    int16_t angularVelocity = 0; // 200 to 1024
+    int16_t angle = 0;           // -180(.)00º to +180(.)00º
+    int16_t speed = 0;           // ±50 to ±1024
+    int16_t angularVelocity = 0; // ±200 to ±4096
 } movement;
+
+// Controllers
+PIDController bearingController =
+    PIDController(KP_BEARING, KI_BEARING, KD_BEARING, // Gains
+                  -4096, 4096,                        // angularVelocity bounds
+                  0                                   // Target bearing
+    );
 
 // Writes the current movement data to the motors.
 void drive() {
@@ -39,10 +47,14 @@ void drive() {
     digitalWriteFast(PIN_MOTOR_FR_DIR, FRSpeed > 0 ? LOW : HIGH);
     digitalWriteFast(PIN_MOTOR_BL_DIR, BLSpeed > 0 ? LOW : HIGH);
     digitalWriteFast(PIN_MOTOR_BR_DIR, BRSpeed > 0 ? HIGH : LOW);
-    analogWrite(PIN_MOTOR_FL_PWM, max(abs(FLSpeed), DRIVE_STALL_SPEED));
-    analogWrite(PIN_MOTOR_FR_PWM, max(abs(FRSpeed), DRIVE_STALL_SPEED));
-    analogWrite(PIN_MOTOR_BL_PWM, max(abs(BLSpeed), DRIVE_STALL_SPEED));
-    analogWrite(PIN_MOTOR_BR_PWM, max(abs(BRSpeed), DRIVE_STALL_SPEED));
+    analogWrite(PIN_MOTOR_FL_PWM,
+                constrain(abs(FLSpeed), DRIVE_STALL_SPEED, DRIVE_MAX_SPEED));
+    analogWrite(PIN_MOTOR_FR_PWM,
+                constrain(abs(FRSpeed), DRIVE_STALL_SPEED, DRIVE_MAX_SPEED));
+    analogWrite(PIN_MOTOR_BL_PWM,
+                constrain(abs(BLSpeed), DRIVE_STALL_SPEED, DRIVE_MAX_SPEED));
+    analogWrite(PIN_MOTOR_BR_PWM,
+                constrain(abs(BRSpeed), DRIVE_STALL_SPEED, DRIVE_MAX_SPEED));
 }
 
 // ------------------------------ MAIN CODE START ------------------------------
@@ -53,7 +65,6 @@ void setup() {
 
     // Initialise monitor serial
     Serial.begin(MONITOR_BAUD_RATE);
-    while (!Serial) delay(10);
     Serial.println("Initialising...");
 
     // Initialise pins
@@ -159,6 +170,11 @@ void loop() {
     // Line avoidance
     // TODO
 
+    // Staying straight
+    const int16_t robotAngle =
+        bearing > 18000 ? (int32_t)bearing - 36000 : bearing;
+    movement.angularVelocity = bearingController.advance(robotAngle);
+
     // ---------------------------- START CALIBRATE ----------------------------
     // CALIBRATE IMU
     // // Set STM32 IMU to calibration mode
@@ -192,44 +208,49 @@ void loop() {
 #endif
 
 #ifdef DEBUG
-    // Print debug data
-    if (line.exists())
-        Serial.printf("Line %03d.%02dº %01d.%02d | ", line.bearing / 100,
-                      line.bearing % 100, line.size / 100, line.size % 100);
-    else
-        Serial.printf("Line             | ");
-    if (bearing != NO_BEARING)
-        Serial.printf("Bearing %03d.%02dº | ", bearing / 100, bearing % 100);
-    else
-        Serial.printf("Bearing          | ");
-    Serial.print("Bounds ");
-    if (bounds.front != NO_BOUNDS)
-        Serial.printf("F: %4d ", bounds.front);
-    else
-        Serial.printf("F:      ");
-    if (bounds.back != NO_BOUNDS)
-        Serial.printf("B: %4d ", bounds.back);
-    else
-        Serial.printf("B:      ");
-    if (bounds.left != NO_BOUNDS)
-        Serial.printf("L: %4d ", bounds.left);
-    else
-        Serial.printf("L:      ");
-    if (bounds.right != NO_BOUNDS)
-        Serial.printf("R: %4d | ", bounds.right);
-    else
-        Serial.printf("R:      | ");
-    Serial.printf("BT Inbound: 0x%02X | ", bluetoothInboundPayload.testByte);
-    Serial.println();
-    delay(100);
+    // // Print debug data
+    // if (line.exists())
+    //     Serial.printf("Line %03d.%02dº %01d.%02d | ", line.bearing / 100,
+    //                   line.bearing % 100, line.size / 100, line.size % 100);
+    // else
+    //     Serial.printf("Line             | ");
+    // if (bearing != NO_BEARING)
+    //     Serial.printf("Bearing %03d.%02dº | ", bearing / 100, bearing % 100);
+    // else
+    //     Serial.printf("Bearing          | ");
+    // Serial.print("Bounds ");
+    // if (bounds.front != NO_BOUNDS)
+    //     Serial.printf("F: %4d ", bounds.front);
+    // else
+    //     Serial.printf("F:      ");
+    // if (bounds.back != NO_BOUNDS)
+    //     Serial.printf("B: %4d ", bounds.back);
+    // else
+    //     Serial.printf("B:      ");
+    // if (bounds.left != NO_BOUNDS)
+    //     Serial.printf("L: %4d ", bounds.left);
+    // else
+    //     Serial.printf("L:      ");
+    // if (bounds.right != NO_BOUNDS)
+    //     Serial.printf("R: %4d | ", bounds.right);
+    // else
+    //     Serial.printf("R:      | ");
+    // Serial.printf("BT Inbound: 0x%02X | ", bluetoothInboundPayload.testByte);
+    // Serial.println();
+    // delay(100);
+
+    // Print controller info
+    Serial.printf("Robot Angle: %3d.%02dº, Angular Velocity: %4d\n",
+                  robotAngle / 100, abs(robotAngle) % 100,
+                  movement.angularVelocity);
 
     // // Print loop time
     // printLoopTime();
 
-    // Test motors
-    movement.angle = 0;
-    movement.speed = 0;
-    movement.angularVelocity = 200;
+    // // Test motors
+    // movement.angle = 0;
+    movement.speed = 50;
+    // movement.angularVelocity = 200;
 
     // // Line Track
     // TODO

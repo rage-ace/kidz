@@ -130,6 +130,7 @@ void setup() {
             delay(100);
         }
     }
+    bno.setExtCrystalUse(false); // we do not have an external crystal
 
     // Check if the STM32 is in calibration mode
     delay(2000);
