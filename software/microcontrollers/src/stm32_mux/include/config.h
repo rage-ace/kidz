@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <stm32f103c_variant_generic.h>
 
+#include "config.h"
+#include "serial.h"
+
 // #define DEBUG
 
 // Baud Rates
@@ -31,7 +34,7 @@
 #define PIN_LDRMUX2_S2  PA5
 #define PIN_LDRMUX2_S3  PA4
 
-// Serial Ports
+// Tell the compiler the specific pins each HardwareSerial uses
 #ifdef DEBUG
     #define PIN_SERIAL1_RX PB7
     #define PIN_SERIAL1_TX PB6
@@ -40,8 +43,12 @@
 #define PIN_SERIAL2_RX PA3
 #define PIN_SERIAL2_TX PA2
 
-#define TEENSY_SERIAL Serial2
-#define DEBUG_SERIAL  Serial1
+// Serial Ports
+SerialManager TeensySerial = SerialManager(
+    Serial2, TEENSY_MUX_BAUD_RATE, MUX_RX_PACKET_SIZE, MUX_RX_SYNC_START_BYTE,
+    MUX_RX_SYNC_END_BYTE, MUX_TX_PACKET_SIZE, MUX_TX_SYNC_START_BYTE,
+    MUX_TX_SYNC_END_BYTE);
+#define DEBUG_SERIAL Serial1
 
 // Light Sensor Config
 enum LDRMUX { MUX1 = 0x00, MUX2 = 0x01 };

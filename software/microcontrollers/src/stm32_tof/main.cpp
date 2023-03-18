@@ -4,7 +4,6 @@
 
 #include "config.h"
 #include "stm32_tof/include/config.h"
-#include "util.h"
 
 // State
 Bounds bounds;
@@ -28,14 +27,11 @@ void setup() {
     Wire.setSCL(PIN_SCL_TOF);
 
     // Initialise serial
-    TEENSY_SERIAL.begin(TEENSY_TOF_BAUD_RATE);
+    TeensySerial.setup(true);
     BLUETOOTH_SERIAL.begin(BLUETOOTH_BAUD_RATE);
-#ifdef DEBUG
-    DEBUG_SERIAL.begin(DEBUG_BAUD_RATE);
-#endif
-    while (!TEENSY_SERIAL) delay(10);
     while (!BLUETOOTH_SERIAL) delay(10);
 #ifdef DEBUG
+    DEBUG_SERIAL.begin(DEBUG_BAUD_RATE);
     while (!DEBUG_SERIAL) delay(10);
 #endif
 
@@ -92,13 +88,11 @@ void loop() {
     memcpy(buf, &bounds, sizeof(bounds));
     memcpy(buf + sizeof(bounds), &bluetoothInboundPayload,
            sizeof(bluetoothInboundPayload));
-    sendPacket(TEENSY_SERIAL, buf, TOF_TX_PACKET_SIZE, TOF_TX_SYNC_START_BYTE,
-               TOF_TX_SYNC_END_BYTE);
+    TeensySerial.sendPacket(buf);
 
     // Read bluetooth outbound payload from Teensy
-    TOFRXPayload tofRxPayload;
-    if (readPacket(TEENSY_SERIAL, &tofRxPayload, TOF_RX_PACKET_SIZE,
-                   TOF_RX_SYNC_START_BYTE, TOF_RX_SYNC_END_BYTE)) {
+    TOFRXPayload tofRXPayload;
+    if (TeensySerial.readPacket(&tofRXPayload)) {
         // Send bluetooth outbound payload to HC05
         // TODO: Send data from tofRxPayload.bluetoothOutboundPayload
     }

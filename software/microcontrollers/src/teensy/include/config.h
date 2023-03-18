@@ -1,6 +1,9 @@
 #ifndef TEENSY_CONFIG_H
 #define TEENSY_CONFIG_H
 
+#include "config.h"
+#include "serial.h"
+
 // Flags
 #define DEBUG_TEENSY
 // #define DEBUG_MUX
@@ -54,10 +57,23 @@
 #define PIN_LIGHTGATE    22
 #define PIN_KICKER       23
 
-#define CORAL_SERIAL Serial1
-#define MUX_SERIAL   Serial2
-#define TOF_SERIAL   Serial3
-#define IMU_SERIAL   Serial4
+// Serial ports
+SerialManager CoralSerial = SerialManager(
+    Serial1, TEENSY_CORAL_BAUD_RATE, CORAL_TX_PACKET_SIZE,
+    CORAL_TX_SYNC_START_BYTE, CORAL_TX_SYNC_END_BYTE, CORAL_RX_PACKET_SIZE,
+    CORAL_RX_SYNC_START_BYTE, CORAL_RX_SYNC_END_BYTE);
+SerialManager MUXSerial = SerialManager(
+    Serial2, TEENSY_MUX_BAUD_RATE, MUX_TX_PACKET_SIZE, MUX_TX_SYNC_START_BYTE,
+    MUX_TX_SYNC_END_BYTE, MUX_RX_PACKET_SIZE, MUX_RX_SYNC_START_BYTE,
+    MUX_RX_SYNC_END_BYTE);
+SerialManager TOFSerial = SerialManager(
+    Serial3, TEENSY_TOF_BAUD_RATE, TOF_TX_PACKET_SIZE, TOF_TX_SYNC_START_BYTE,
+    TOF_TX_SYNC_END_BYTE, TOF_RX_PACKET_SIZE, TOF_RX_SYNC_START_BYTE,
+    TOF_RX_SYNC_END_BYTE);
+SerialManager IMUSerial = SerialManager(
+    Serial4, TEENSY_IMU_BAUD_RATE, IMU_TX_PACKET_SIZE, IMU_TX_SYNC_START_BYTE,
+    IMU_TX_SYNC_END_BYTE, IMU_RX_PACKET_SIZE, IMU_RX_SYNC_START_BYTE,
+    IMU_RX_SYNC_END_BYTE);
 
 // Movement Config
 

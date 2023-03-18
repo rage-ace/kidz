@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "serial.h"
 #include <stdint.h>
 
 // NULL values
@@ -54,11 +55,11 @@ struct BluetoothPayload { // This should be symmetric
 struct MUXTXPayload {
     Line line;
 };
+struct MUXRXPayload {};
 
 struct IMUTXPayload {
     int16_t robotAngle = NO_ANGLE;
 };
-
 struct IMURXPayload {
     bool calibrating = false;
 };
@@ -67,10 +68,14 @@ struct TOFTXPayload {
     Bounds bounds;
     BluetoothPayload bluetoothInboundPayload;
 };
-
 struct TOFRXPayload {
     BluetoothPayload bluetoothOutboundPayload;
 };
+
+struct CoralTXPayload {
+    // TODO
+};
+struct CoralRXPayload {};
 
 // Shared serial information
 #define MONITOR_BAUD_RATE      115200
@@ -82,6 +87,10 @@ struct TOFRXPayload {
 #define MUX_TX_PACKET_SIZE     sizeof(MUXTXPayload) + 2U
 #define MUX_TX_SYNC_START_BYTE 0b11010110
 #define MUX_TX_SYNC_END_BYTE   0b00110010
+
+#define MUX_RX_PACKET_SIZE     sizeof(MUXRXPayload) + 2U
+#define MUX_RX_SYNC_START_BYTE 0b11010110
+#define MUX_RX_SYNC_END_BYTE   0b00110010
 
 #define IMU_TX_PACKET_SIZE     sizeof(IMUTXPayload) + 2U
 #define IMU_TX_SYNC_START_BYTE 0b11010110
@@ -98,6 +107,14 @@ struct TOFRXPayload {
 #define TOF_RX_PACKET_SIZE     sizeof(TOFRXPayload) + 2U
 #define TOF_RX_SYNC_START_BYTE 0b11010110
 #define TOF_RX_SYNC_END_BYTE   0b00110010
+
+#define CORAL_TX_PACKET_SIZE     sizeof(CoralTXPayload) + 2U
+#define CORAL_TX_SYNC_START_BYTE 0b11010110
+#define CORAL_TX_SYNC_END_BYTE   0b00110010
+
+#define CORAL_RX_PACKET_SIZE     sizeof(CoralRXPayload) + 2U
+#define CORAL_RX_SYNC_START_BYTE 0b11010110
+#define CORAL_RX_SYNC_END_BYTE   0b00110010
 
 // Loop times (measured on 2023-03-18)
 // #define _TEENSY_LOOP_TIME 0U // in µs, default:   260 (min=  172, max=  348)

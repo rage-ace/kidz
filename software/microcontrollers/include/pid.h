@@ -3,16 +3,17 @@
 
 class PIDController {
   public:
-    PIDController(float kp, float ki, float kd, float min, float max,
-                  float setpoint = 0.0F);
+    PIDController(const float kp, const float ki, const float kd,
+                  const float min, const float max,
+                  const float setpoint = 0.0F);
 
     // Update controller
-    float advance(float input);
+    float advance(const float input);
 
     // Update parameters
-    void updateSetpoint(float setpoint);
-    void updateLimits(float min, float max);
-    void updateGains(float kp, float ki, float kd);
+    void updateSetpoint(const float setpoint);
+    void updateLimits(const float min, const float max);
+    void updateGains(const float kp, const float ki, const float kd);
 
   private:
     // Parameters

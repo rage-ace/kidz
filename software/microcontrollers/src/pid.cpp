@@ -3,12 +3,13 @@
 #include <Arduino.h>
 
 // A simple PID controller.
-PIDController::PIDController(float kp, float ki, float kd, float min, float max,
-                             float setpoint)
+PIDController::PIDController(const float kp, const float ki, const float kd,
+                             const float min, const float max,
+                             const float setpoint)
     : _kp(kp), _ki(ki), _kd(kd), _min(min), _max(max), _setpoint(setpoint) {}
 
 // Update controller,
-float PIDController::advance(float input) {
+float PIDController::advance(const float input) {
     // Find dt
     const auto now = micros();
     const auto dt = now - _lastTime;
@@ -26,16 +27,19 @@ float PIDController::advance(float input) {
 }
 
 // Update setpoint.
-void PIDController::updateSetpoint(float setpoint) { _setpoint = setpoint; }
+void PIDController::updateSetpoint(const float setpoint) {
+    _setpoint = setpoint;
+}
 
 // Update limits.
-void PIDController::updateLimits(float min, float max) {
+void PIDController::updateLimits(const float min, const float max) {
     _min = min;
     _max = max;
 }
 
 // Update gains.
-void PIDController::updateGains(float kp, float ki, float kd) {
+void PIDController::updateGains(const float kp, const float ki,
+                                const float kd) {
     _kp = kp;
     _ki = ki;
     _kd = kd;

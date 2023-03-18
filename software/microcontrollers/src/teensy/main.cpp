@@ -1,9 +1,9 @@
 #include <Arduino.h>
 
+#include "angle.h"
 #include "config.h"
 #include "pid.h"
 #include "teensy/include/config.h"
-#include "util.h"
 
 // State
 struct Line line;         // Read from STM32 MUX
@@ -61,28 +61,20 @@ void waitForSubprocessorInit() {
 #ifndef DEBUG_MUX
     // Wait for STM32 MUX to initialise
     Serial.println("Waiting for STM32 MUX to initialise...");
-    MUXTXPayload muxTXPayload;
-    while (!readPacket(MUX_SERIAL, &muxTXPayload, MUX_TX_PACKET_SIZE,
-                       MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE))
-        delay(10);
+    MUXSerial.waitForPacket();
 #endif
 
 #ifndef DEBUG_TOF
     // Wait for STM32 TOF to initialise
     Serial.println("Waiting for STM32 TOF to initialise...");
-    TOFTXPayload tofTXPayload;
-    while (!readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
-                       TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE))
-        delay(10);
+    TOFSerial.waitForPacket();
 #endif
 
 #ifndef DEBUG_IMU
     // Wait for STM32 IMU to initialise and get the angle offset
     Serial.println("Waiting for STM32 IMU to initialise...");
     IMUTXPayload imuTXPayload;
-    while (!readPacket(IMU_SERIAL, &imuTXPayload, IMU_TX_PACKET_SIZE,
-                       IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE))
-        delay(10);
+    IMUSerial.waitForPacket(&imuTXPayload);
     Serial.println("Waiting for IMU to stabilise...");
     delay(3000); // Wait for IMU to stabilise
     robotAngleOffset = imuTXPayload.robotAngle;
@@ -95,26 +87,20 @@ void readSensors() {
 #ifndef DEBUG_MUX
     // Read line data from STM32 MUX
     MUXTXPayload muxTXPayload;
-    if (readPacket(MUX_SERIAL, &muxTXPayload, MUX_TX_PACKET_SIZE,
-                   MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE)) {
-        line = muxTXPayload.line;
-    }
+    if (MUXSerial.readPacket(&muxTXPayload)) line = muxTXPayload.line;
 #endif
 
 #ifndef DEBUG_IMU
     // Read attitude data from STM32 IMU
     IMUTXPayload imuTXPayload;
-    if (readPacket(IMU_SERIAL, &imuTXPayload, IMU_TX_PACKET_SIZE,
-                   IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE)) {
+    if (IMUSerial.readPacket(&imuTXPayload))
         robotAngle = clipAngle(imuTXPayload.robotAngle - robotAngleOffset);
-    }
 #endif
 
 #ifndef DEBUG_TOF
     // Read bounds data from STM32 TOF
     TOFTXPayload tofTXPayload;
-    if (readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
-                   TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE)) {
+    if (TOFSerial.readPacket(&tofTXPayload)) {
         bounds = tofTXPayload.bounds;
         bluetoothInboundPayload = tofTXPayload.bluetoothInboundPayload;
     }
@@ -131,14 +117,13 @@ void performCalibration() {
     const bool calibrating = true;
     char buf[sizeof(IMURXPayload)];
     memcpy(buf, &calibrating, sizeof(calibrating));
-    sendPacket(IMU_SERIAL, buf, IMU_RX_PACKET_SIZE, IMU_RX_SYNC_START_BYTE,
-               IMU_RX_SYNC_END_BYTE);
+    IMUSerial.sendPacket(buf);
 
     int16_t angle = 0;
     uint32_t time = 0;
     while (1) {
         // Redirect IMU Serial to monitor
-        if (IMU_SERIAL.available() > 0) Serial.print(char(IMU_SERIAL.read()));
+        IMUSerial.redirectBuffer(Serial);
 
         if (millis() - time >= 10) {
             time = millis();
@@ -159,17 +144,17 @@ void performCalibration() {
 void performDebug() {
 #ifdef DEBUG_MUX
     // Redirect MUX Serial to monitor
-    if (MUX_SERIAL.available() > 0) Serial.print(char(MUX_SERIAL.read()));
+    MUXSerial.redirectBuffer(Serial);
 #endif
 
 #ifdef DEBUG_IMU
     // Redirect IMU Serial to monitor
-    if (IMU_SERIAL.available() > 0) Serial.print(char(IMU_SERIAL.read()));
+    IMUSerial.redirectBuffer(Serial);
 #endif
 
 #ifdef DEBUG_TOF
     // Redirect TOF Serial to monitor
-    if (TOF_SERIAL.available() > 0) Serial.print(char(TOF_SERIAL.read()));
+    TOFSerial.redirectBuffer(Serial);
 #endif
 
 #ifdef DEBUG_TEENSY
@@ -252,14 +237,10 @@ void setup() {
     // analogWriteFrequency(PIN_MOTOR_BR_PWM, 36621);
 
     // Initialise serial
-    MUX_SERIAL.begin(TEENSY_MUX_BAUD_RATE);
-    IMU_SERIAL.begin(TEENSY_IMU_BAUD_RATE);
-    TOF_SERIAL.begin(TEENSY_TOF_BAUD_RATE);
-    CORAL_SERIAL.begin(TEENSY_CORAL_BAUD_RATE);
-    while (!MUX_SERIAL) delay(10);
-    while (!IMU_SERIAL) delay(10);
-    while (!TOF_SERIAL) delay(10);
-    while (!CORAL_SERIAL) delay(10);
+    MUXSerial.setup(true);
+    IMUSerial.setup(true);
+    TOFSerial.setup(true);
+    CoralSerial.setup(true);
 
 #ifndef CALIBRATE // Don't wait for everything to initialise if calibrating
     waitForSubprocessorInit(); // this is obviously blocking
@@ -305,7 +286,6 @@ void loop() {
     };
     char buf[sizeof(TOFRXPayload)];
     memcpy(buf, &bluetoothOutboundPayload, sizeof(bluetoothOutboundPayload));
-    sendPacket(TOF_SERIAL, buf, TOF_RX_PACKET_SIZE, TOF_RX_SYNC_START_BYTE,
-               TOF_RX_SYNC_END_BYTE);
+    TOFSerial.sendPacket(buf);
 }
 // ------------------------------- MAIN CODE END -------------------------------

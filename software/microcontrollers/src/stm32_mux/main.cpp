@@ -1,8 +1,8 @@
 #include <Arduino.h>
 
+#include "angle.h"
 #include "config.h"
 #include "stm32_mux/include/config.h"
-#include "util.h"
 
 // State
 struct Line line;
@@ -110,10 +110,10 @@ void printLDRThresholds() {
     }
 
     // Print the thresholds (averages of min and max)
-    TEENSY_SERIAL.print("Thresholds: {");
+    TeensySerial.printf("Thresholds: {");
     for (uint8_t i = 0; i < LDR_COUNT; ++i)
-        TEENSY_SERIAL.printf("%d, ", (min[i] + max[i]) >> 1);
-    TEENSY_SERIAL.print("}\n");
+        TeensySerial.printf("%d, ", (min[i] + max[i]) >> 1);
+    TeensySerial.printf("}\n");
 }
 
 // DEBUG: Prints detected line data.
@@ -124,18 +124,18 @@ void printLDR() {
     for (uint8_t i = 0; i < LDR_COUNT; ++i) values[i] = readLDR(i);
 
     if (line.exists()) {
-        TEENSY_SERIAL.printf("%4d.%02dº %01d.%02d |", line.angle / 100,
-                             abs(line.angle % 100), line.size / 100,
-                             line.size % 100);
+        TeensySerial.printf("%4d.%02dº %01d.%02d |", line.angle / 100,
+                            abs(line.angle % 100), line.size / 100,
+                            line.size % 100);
     } else {
-        TEENSY_SERIAL.printf("              |");
+        TeensySerial.printf("              |");
     }
     for (uint8_t i = 0; i < LDR_COUNT >> 1; ++i)
-        TEENSY_SERIAL.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
-    TEENSY_SERIAL.printf("|");
+        TeensySerial.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
+    TeensySerial.printf("|");
     for (uint8_t i = LDR_COUNT >> 1; i < LDR_COUNT; ++i)
-        TEENSY_SERIAL.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
-    TEENSY_SERIAL.printf("|\n");
+        TeensySerial.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
+    TeensySerial.printf("|\n");
 }
 
 // ------------------------------ MAIN CODE START ------------------------------
@@ -159,12 +159,9 @@ void setup() {
     analogReadResolution(12);
 
     // Initialise serial
-    TEENSY_SERIAL.begin(TEENSY_MUX_BAUD_RATE);
+    TeensySerial.setup(true);
 #ifdef DEBUG
     DEBUG_SERIAL.begin(DEBUG_BAUD_RATE);
-#endif
-    while (!TEENSY_SERIAL) delay(10);
-#ifdef DEBUG
     while (!DEBUG_SERIAL) delay(10);
 #endif
 
@@ -179,8 +176,7 @@ void loop() {
     // Send the line data over serial to Teensy
     uint8_t buf[sizeof(MUXTXPayload)];
     memcpy(buf, &line, sizeof(line));
-    sendPacket(TEENSY_SERIAL, buf, MUX_TX_PACKET_SIZE, MUX_TX_SYNC_START_BYTE,
-               MUX_TX_SYNC_END_BYTE);
+    TeensySerial.sendPacket(buf);
 
     // TODO: Program a calibration mode
     // printLDRThresholds();

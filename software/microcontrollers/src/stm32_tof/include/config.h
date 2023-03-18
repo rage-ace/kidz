@@ -5,6 +5,9 @@
 #include <cstdint>
 #include <stm32f103c_variant_generic.h>
 
+#include "config.h"
+#include "serial.h"
+
 // #define DEBUG
 
 // Baud Rates
@@ -34,7 +37,7 @@
 #define PIN_LEFT_EYE  PB0
 #define PIN_RIGHT_EYE PB1
 
-// Serial Ports
+// Tell the compiler the specific pins each HardwareSerial uses
 #ifdef DEBUG
     #define PIN_SERIAL1_RX PB7
     #define PIN_SERIAL1_TX PB6
@@ -46,7 +49,11 @@
 #define PIN_SERIAL3_RX PB11
 #define PIN_SERIAL3_TX PB10
 
-#define TEENSY_SERIAL    Serial2
+// Serial Ports
+SerialManager TeensySerial = SerialManager(
+    Serial2, TEENSY_TOF_BAUD_RATE, TOF_RX_PACKET_SIZE, TOF_RX_SYNC_START_BYTE,
+    TOF_RX_SYNC_END_BYTE, TOF_TX_PACKET_SIZE, TOF_TX_SYNC_START_BYTE,
+    TOF_TX_SYNC_END_BYTE);
 #define BLUETOOTH_SERIAL Serial3
 #define DEBUG_SERIAL     Serial1
 
