@@ -1,10 +1,29 @@
 #ifndef TEENSY_CONFIG_H
 #define TEENSY_CONFIG_H
 
-#define DEBUG
+// Flags
+#define DEBUG_TEENSY
 // #define DEBUG_MUX
 // #define DEBUG_IMU
 // #define DEBUG_TOF
+// #define CALIBRATE_IMU
+
+// Macro Flags
+#ifdef DEBUG_TEENSY
+    #define DEBUG
+#endif
+#ifdef DEBUG_MUX
+    #define DEBUG
+#endif
+#ifdef DEBUG_IMU
+    #define DEBUG
+#endif
+#ifdef DEBUG_TOF
+    #define DEBUG
+#endif
+#ifdef CALIBRATE_IMU
+    #define CALIBRATE
+#endif
 
 // Pins
 #define PIN_LED_DEBUG 13

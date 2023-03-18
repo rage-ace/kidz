@@ -57,6 +57,136 @@ void drive() {
                 constrain(abs(BRSpeed), DRIVE_STALL_SPEED, DRIVE_MAX_SPEED));
 }
 
+void readSensors() {
+#ifndef DEBUG_MUX
+    // Read line data from STM32 MUX
+    MUXTXPayload muxTXPayload;
+    if (readPacket(MUX_SERIAL, &muxTXPayload, MUX_TX_PACKET_SIZE,
+                   MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE))
+        line = muxTXPayload.line;
+#endif
+
+#ifndef DEBUG_IMU
+    // Read attitude data from STM32 IMU
+    IMUTXPayload imuTXPayload;
+    if (readPacket(IMU_SERIAL, &imuTXPayload, IMU_TX_PACKET_SIZE,
+                   IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE)) {
+        const int32_t _bearing = imuTXPayload.bearing - bearingOffset;
+        bearing = _bearing >= 0 ? _bearing : _bearing + 36000;
+    }
+#endif
+
+#ifndef DEBUG_TOF
+    // Read bounds data from STM32 TOF
+    TOFTXPayload tofTXPayload;
+    if (readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
+                   TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE)) {
+        bounds = tofTXPayload.bounds;
+        bluetoothInboundPayload = tofTXPayload.bluetoothInboundPayload;
+    }
+#endif
+
+    // Read ball data from coral
+    // TODO
+}
+
+void performCalibration() {
+#ifdef CALIBRATE_IMU
+    // CALIBRATE IMU
+    // Set STM32 IMU to calibration mode
+    const bool calibrating = true;
+    char buf[sizeof(IMURXPayload)];
+    memcpy(buf, &calibrating, sizeof(calibrating));
+    sendPacket(IMU_SERIAL, buf, IMU_RX_PACKET_SIZE, IMU_RX_SYNC_START_BYTE,
+               IMU_RX_SYNC_END_BYTE);
+
+    int16_t angle = 0;
+    uint32_t time = 0;
+    while (1) {
+        // Redirect IMU Serial to monitor
+        if (IMU_SERIAL.available() > 0) Serial.print(char(IMU_SERIAL.read()));
+
+        if (millis() - time >= 10) {
+            time = millis();
+
+            // Drive motors to create magnetometer noise
+            movement.angle = angle;
+            movement.speed = 512;
+            drive();
+
+            // Update angle counter
+            ++angle;
+            if (angle == 180) angle = -179;
+        }
+    }
+#endif
+}
+
+void performDebug() {
+#ifdef DEBUG_MUX
+    // Redirect MUX Serial to monitor
+    if (MUX_SERIAL.available() > 0) Serial.print(char(MUX_SERIAL.read()));
+#endif
+
+#ifdef DEBUG_IMU
+    // Redirect IMU Serial to monitor
+    if (IMU_SERIAL.available() > 0) Serial.print(char(IMU_SERIAL.read()));
+#endif
+
+#ifdef DEBUG_TOF
+    // Redirect TOF Serial to monitor
+    if (TOF_SERIAL.available() > 0) Serial.print(char(TOF_SERIAL.read()));
+#endif
+
+#ifdef DEBUG_TEENSY
+    // // Print debug data
+    // if (line.exists())
+    //     Serial.printf("Line %03d.%02dº %01d.%02d | ", line.bearing / 100,
+    //                   line.bearing % 100, line.size / 100, line.size % 100);
+    // else
+    //     Serial.printf("Line             | ");
+    // if (bearing != NO_BEARING)
+    //     Serial.printf("Bearing %03d.%02dº | ", bearing / 100, bearing % 100);
+    // else
+    //     Serial.printf("Bearing          | ");
+    // Serial.print("Bounds ");
+    // if (bounds.front != NO_BOUNDS)
+    //     Serial.printf("F: %4d ", bounds.front);
+    // else
+    //     Serial.printf("F:      ");
+    // if (bounds.back != NO_BOUNDS)
+    //     Serial.printf("B: %4d ", bounds.back);
+    // else
+    //     Serial.printf("B:      ");
+    // if (bounds.left != NO_BOUNDS)
+    //     Serial.printf("L: %4d ", bounds.left);
+    // else
+    //     Serial.printf("L:      ");
+    // if (bounds.right != NO_BOUNDS)
+    //     Serial.printf("R: %4d | ", bounds.right);
+    // else
+    //     Serial.printf("R:      | ");
+    // Serial.printf("BT Inbound: 0x%02X | ", bluetoothInboundPayload.testByte);
+    // Serial.println();
+    // delay(100);
+
+    // Print controller info
+    Serial.printf("Bearing: %3d.%02dº, Angular Velocity: %4d\n", bearing / 100,
+                  abs(bearing) % 100, movement.angularVelocity);
+
+    // // Print loop time
+    // printLoopTime();
+
+    // // Test motors
+    // movement.angle = 0;
+    movement.speed = 50;
+    // movement.angularVelocity = 200;
+
+    // // Line Track
+    // TODO
+#endif
+}
+
 // ------------------------------ MAIN CODE START ------------------------------
 void setup() {
     // Turn on the debug LED
@@ -95,25 +225,26 @@ void setup() {
     while (!TOF_SERIAL) delay(10);
     while (!CORAL_SERIAL) delay(10);
 
-#ifndef DEBUG_MUX
+#ifndef CALIBRATE // Don't wait for everything to initialise if calibrating
+    #ifndef DEBUG_MUX
     // Wait for STM32 MUX to initialise
     Serial.println("Waiting for STM32 MUX to initialise...");
     MUXTXPayload muxTXPayload;
     while (!readPacket(MUX_SERIAL, &muxTXPayload, MUX_TX_PACKET_SIZE,
                        MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE))
         delay(10);
-#endif
+    #endif
 
-#ifndef DEBUG_TOF
+    #ifndef DEBUG_TOF
     // Wait for STM32 TOF to initialise
     Serial.println("Waiting for STM32 TOF to initialise...");
     TOFTXPayload tofTXPayload;
     while (!readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
                        TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE))
         delay(10);
-#endif
+    #endif
 
-#ifndef DEBUG_IMU
+    #ifndef DEBUG_IMU
     // Wait for STM32 IMU to initialise and get the bearing offset
     Serial.println("Waiting for STM32 IMU to initialise...");
     IMUTXPayload imuTXPayload;
@@ -123,139 +254,43 @@ void setup() {
     Serial.println("Waiting for IMU to stabilise...");
     delay(2000); // Wait for IMU to stabilise
     bearingOffset = imuTXPayload.bearing;
-#else
+    #else
     bearingOffset = 0;
+    #endif
 #endif
 
     // Turn off the debug LED
     Serial.println("Initialisation complete");
     digitalWriteFast(PIN_LED_DEBUG, LOW);
+
+#ifdef CALIBRATE
+    // Runs the corresponding calibration if flag is defined
+    performCalibration(); // this would probably be blocking
+#endif
 }
 
 void loop() {
-#ifndef DEBUG_MUX
-    // Read line data from STM32 MUX
-    MUXTXPayload muxTXPayload;
-    if (readPacket(MUX_SERIAL, &muxTXPayload, MUX_TX_PACKET_SIZE,
-                   MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE))
-        line = muxTXPayload.line;
-#endif
+    // Read all sensor packets from the different subprocessors
+    readSensors();
 
-#ifndef DEBUG_IMU
-    // Read attitude data from STM32 IMU
-    IMUTXPayload imuTXPayload;
-    if (readPacket(IMU_SERIAL, &imuTXPayload, IMU_TX_PACKET_SIZE,
-                   IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE)) {
-        const int32_t _bearing = imuTXPayload.bearing - bearingOffset;
-        bearing = _bearing >= 0 ? _bearing : _bearing + 36000;
-    }
-#endif
-
-#ifndef DEBUG_TOF
-    // Read bounds data from STM32 TOF
-    TOFTXPayload tofTXPayload;
-    if (readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
-                   TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE)) {
-        bounds = tofTXPayload.bounds;
-        bluetoothInboundPayload = tofTXPayload.bluetoothInboundPayload;
-    }
-#endif
-
-    // Read ball data from coral
-    // TODO
-
-    // Ball following
-    // TODO
-
-    // Line avoidance
-    // TODO
-
-    // Staying straight
+    // Keep straight
     const int16_t robotAngle =
         bearing > 18000 ? (int32_t)bearing - 36000 : bearing;
     movement.angularVelocity = bearingController.advance(robotAngle);
 
-    // ---------------------------- START CALIBRATE ----------------------------
-    // CALIBRATE IMU
-    // // Set STM32 IMU to calibration mode
-    // const bool calibrating = true;
-    // char buf[sizeof(IMURXPayload)];
-    // memcpy(buf, &calibrating, sizeof(calibrating));
-    // sendPacket(IMU_SERIAL, buf, IMU_RX_PACKET_SIZE, IMU_RX_SYNC_START_BYTE,
-    //            IMU_RX_SYNC_END_BYTE);
-    // // Redirect IMU Serial to monitor
-    // while (1) {
-    //     if (IMU_SERIAL.available() > 0)
-    //     Serial.print(char(IMU_SERIAL.read()));
-    // }
+    // Follow the ball
+    // TODO
 
-    // ----------------------------- END CALIBRATE -----------------------------
+    // Slow down near the wall
+    // TODO
 
-    // ------------------------------ START DEBUG ------------------------------
-#ifdef DEBUG_MUX
-    // Redirect MUX Serial to monitor
-    if (MUX_SERIAL.available() > 0) Serial.print(char(MUX_SERIAL.read()));
-#endif
-
-#ifdef DEBUG_IMU
-    // Redirect IMU Serial to monitor
-    if (IMU_SERIAL.available() > 0) Serial.print(char(IMU_SERIAL.read()));
-#endif
-
-#ifdef DEBUG_TOF
-    // Redirect TOF Serial to monitor
-    if (TOF_SERIAL.available() > 0) Serial.print(char(TOF_SERIAL.read()));
-#endif
+    // Avoid the lines
+    // TODO
 
 #ifdef DEBUG
-    // // Print debug data
-    // if (line.exists())
-    //     Serial.printf("Line %03d.%02dº %01d.%02d | ", line.bearing / 100,
-    //                   line.bearing % 100, line.size / 100, line.size % 100);
-    // else
-    //     Serial.printf("Line             | ");
-    // if (bearing != NO_BEARING)
-    //     Serial.printf("Bearing %03d.%02dº | ", bearing / 100, bearing % 100);
-    // else
-    //     Serial.printf("Bearing          | ");
-    // Serial.print("Bounds ");
-    // if (bounds.front != NO_BOUNDS)
-    //     Serial.printf("F: %4d ", bounds.front);
-    // else
-    //     Serial.printf("F:      ");
-    // if (bounds.back != NO_BOUNDS)
-    //     Serial.printf("B: %4d ", bounds.back);
-    // else
-    //     Serial.printf("B:      ");
-    // if (bounds.left != NO_BOUNDS)
-    //     Serial.printf("L: %4d ", bounds.left);
-    // else
-    //     Serial.printf("L:      ");
-    // if (bounds.right != NO_BOUNDS)
-    //     Serial.printf("R: %4d | ", bounds.right);
-    // else
-    //     Serial.printf("R:      | ");
-    // Serial.printf("BT Inbound: 0x%02X | ", bluetoothInboundPayload.testByte);
-    // Serial.println();
-    // delay(100);
-
-    // Print controller info
-    Serial.printf("Robot Angle: %3d.%02dº, Angular Velocity: %4d\n",
-                  robotAngle / 100, abs(robotAngle) % 100,
-                  movement.angularVelocity);
-
-    // // Print loop time
-    // printLoopTime();
-
-    // // Test motors
-    // movement.angle = 0;
-    movement.speed = 50;
-    // movement.angularVelocity = 200;
-
-    // // Line Track
-    // TODO
+    // Runs any debug code if the corresponding flag is defined
+    performDebug();
 #endif
-    // ------------------------------- END DEBUG -------------------------------
 
     // Actuate outputs
     drive();
