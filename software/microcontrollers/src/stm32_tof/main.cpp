@@ -7,7 +7,8 @@
 #include "util.h"
 
 // State
-Boundary boundary;
+Bounds bounds;
+BluetoothPayload bluetoothInboundPayload;
 
 // Time-Of-Flight Sensors
 VL53L1X tofs[TOF_COUNT];
@@ -28,10 +29,12 @@ void setup() {
 
     // Initialise serial
     TEENSY_SERIAL.begin(TEENSY_TOF_BAUD_RATE);
+    BLUETOOTH_SERIAL.begin(BLUETOOTH_BAUD_RATE);
 #if DEBUG
     DEBUG_SERIAL.begin(DEBUG_BAUD_RATE);
 #endif
     while (!TEENSY_SERIAL) delay(10);
+    while (!BLUETOOTH_SERIAL) delay(10);
 #if DEBUG
     while (!DEBUG_SERIAL) delay(10);
 #endif
@@ -53,8 +56,11 @@ void setup() {
         delay(10);
 
         tofs[i].setTimeout(500);
-        if (!tofs[i].init()) {
-            Serial.printf("Failed to detect and initialize sensor %d", i);
+        if (!tofs[i].init()) { // NOTE: This fails if the sensor is already
+                               // initialised
+#if DEBUG
+            DEBUG_SERIAL.printf("Failed to detect and initialize sensor %d", i);
+#endif
             while (1) {}
         }
 
@@ -75,14 +81,27 @@ void loop() {
     for (uint8_t i = 0; i < TOF_COUNT; i++) {
         tofs[i].read();
         if (tofs[i].ranging_data.range_status == VL53L1X::RangeValid)
-            boundary.set(i, tofs[i].ranging_data.range_mm);
+            bounds.set(i, tofs[i].ranging_data.range_mm);
     }
 
-    // Send the TOF data over serial to Teensy
+    // Read bluetooth inbound payload from HC05
+    // TODO: Read data into &bluetoothInboundPayload
+
+    // Send data over serial to Teensy
     uint8_t buf[sizeof(TOFTXPayload)];
-    memcpy(buf, &boundary, sizeof(boundary));
+    memcpy(buf, &bounds, sizeof(bounds));
+    memcpy(buf + sizeof(bounds), &bluetoothInboundPayload,
+           sizeof(bluetoothInboundPayload));
     sendPacket(TEENSY_SERIAL, buf, TOF_TX_PACKET_SIZE, TOF_TX_SYNC_START_BYTE,
                TOF_TX_SYNC_END_BYTE);
+
+    // Read bluetooth outbound payload from Teensy
+    TOFRXPayload tofRxPayload;
+    if (readPacket(TEENSY_SERIAL, &tofRxPayload, TOF_RX_PACKET_SIZE,
+                   TOF_RX_SYNC_START_BYTE, TOF_RX_SYNC_END_BYTE)) {
+        // Send bluetooth outbound payload to HC05
+        // TODO: Send data from tofRxPayload.bluetoothOutboundPayload
+    }
 
     // ------------------------------ START DEBUG ------------------------------
 
@@ -95,8 +114,8 @@ void loop() {
     // delay(5000);
 
     // // Print payload
-    // TEENSY_SERIAL.printf("F: %4d B: %4d L: %4d R: %4d\n", boundary.front,
-    //                      boundary.back, boundary.left, boundary.right);
+    // TEENSY_SERIAL.printf("F: %4d B: %4d L: %4d R: %4d\n", bounds.front,
+    //                      bounds.back, bounds.left, bounds.right);
 
     // ------------------------------- END DEBUG -------------------------------
 }

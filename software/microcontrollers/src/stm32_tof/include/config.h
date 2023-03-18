@@ -2,12 +2,14 @@
 #define STM32_TOF_CONFIG_H
 
 #include <VL53L1X.h>
+#include <cstdint>
 #include <stm32f103c_variant_generic.h>
 
 #define DEBUG false
 
 // Baud Rates
-#define DEBUG_BAUD_RATE 115200
+#define BLUETOOTH_BAUD_RATE 9600
+#define DEBUG_BAUD_RATE     115200
 
 // Pins
 #define PIN_LED_DEBUG PC13
@@ -17,8 +19,8 @@
 #define PIN_RX PA3
 #define PIN_TX PA2
 
-#define PIN_RX_BLUETOOTH PB10
-#define PIN_TX_BLUETOOTH PB11
+#define PIN_RX_BLUETOOTH PB11
+#define PIN_TX_BLUETOOTH PB10
 
 #define PIN_SDA_TOF PB9
 #define PIN_SCL_TOF PB8
@@ -32,8 +34,20 @@
 #define PIN_LEFT_EYE  PB0
 #define PIN_RIGHT_EYE PB1
 
-#define TEENSY_SERIAL    Serial
-#define BLUETOOTH_SERIAL Serial2
+// Serial Ports
+#if DEBUG
+    #define PIN_SERIAL1_RX PB7
+    #define PIN_SERIAL1_TX PB6
+#endif
+
+#define PIN_SERIAL2_RX PA3
+#define PIN_SERIAL2_TX PA2
+
+#define PIN_SERIAL3_RX PB11
+#define PIN_SERIAL3_TX PB10
+
+#define TEENSY_SERIAL    Serial2
+#define BLUETOOTH_SERIAL Serial3
 #define DEBUG_SERIAL     Serial1
 
 // EEPROM Addresses

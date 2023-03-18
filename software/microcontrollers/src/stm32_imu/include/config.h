@@ -19,7 +19,16 @@
 #define PIN_SDA_IMU PB9
 #define PIN_SCL_IMU PB8
 
-#define TEENSY_SERIAL Serial
+// Serial Ports
+#if DEBUG
+    #define PIN_SERIAL1_RX PB7
+    #define PIN_SERIAL1_TX PB6
+#endif
+
+#define PIN_SERIAL2_RX PA3
+#define PIN_SERIAL2_TX PA2
+
+#define TEENSY_SERIAL Serial2
 #define DEBUG_SERIAL  Serial1
 
 // EEPROM Addresses

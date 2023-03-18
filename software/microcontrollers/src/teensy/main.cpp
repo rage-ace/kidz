@@ -8,7 +8,8 @@
 struct Line line;       // Read from STM32 MUX
 uint16_t bearing = 0;   // Read from STM32 IMU, 000(.)00° to 359(.)99°
 uint16_t bearingOffset; // Reset on Teensy init
-Boundary boundary;      // Read from STM32 TOF, 000(.)0 cm to 400(.)0 cm
+Bounds bounds;          // Read from STM32 TOF, 000(.)0 cm to 400(.)0 cm
+BluetoothPayload bluetoothInboundPayload; // Read from STM32 TOF
 struct Movement {
     float angle = 0;             // 0.0º to 360.0º
     int16_t speed = 0;           // 50 to 1024
@@ -50,6 +51,11 @@ void setup() {
     pinMode(PIN_LED_DEBUG, OUTPUT);
     digitalWriteFast(PIN_LED_DEBUG, HIGH);
 
+    // Initialise monitor serial
+    Serial.begin(MONITOR_BAUD_RATE);
+    while (!Serial) delay(10);
+    Serial.println("Initialising...");
+
     // Initialise pins
     pinMode(PIN_MOTOR_FL_DIR, OUTPUT);
     pinMode(PIN_MOTOR_FR_DIR, OUTPUT);
@@ -69,32 +75,41 @@ void setup() {
     // analogWriteFrequency(PIN_MOTOR_BR_PWM, 36621);
 
     // Initialise serial
-    Serial.begin(MONITOR_BAUD_RATE);
     MUX_SERIAL.begin(TEENSY_MUX_BAUD_RATE);
     IMU_SERIAL.begin(TEENSY_IMU_BAUD_RATE);
     TOF_SERIAL.begin(TEENSY_TOF_BAUD_RATE);
     CORAL_SERIAL.begin(TEENSY_CORAL_BAUD_RATE);
-    while (!Serial) delay(10);
     while (!MUX_SERIAL) delay(10);
     while (!IMU_SERIAL) delay(10);
     while (!TOF_SERIAL) delay(10);
     // while (!CORAL_SERIAL) delay(10);
 
     // Wait for STM32 MUX to initialise
+    Serial.println("Waiting for STM32 MUX to initialise...");
     MUXTXPayload muxTXPayload;
     while (!readPacket(MUX_SERIAL, &muxTXPayload, MUX_TX_PACKET_SIZE,
                        MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE))
         delay(10);
 
+    // Wait for STM32 TOF to initialise
+    Serial.println("Waiting for STM32 TOF to initialise...");
+    TOFTXPayload tofTXPayload;
+    while (!readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
+                       TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE))
+        delay(10);
+
     // Wait for STM32 IMU to initialise and get the bearing offset
+    Serial.println("Waiting for STM32 IMU to initialise...");
     IMUTXPayload imuTXPayload;
     while (!readPacket(IMU_SERIAL, &imuTXPayload, IMU_TX_PACKET_SIZE,
                        IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE))
         delay(10);
-    delay(1000); // Wait for IMU to stabilise
+    Serial.println("Waiting for IMU to stabilise...");
+    delay(2000); // Wait for IMU to stabilise
     bearingOffset = imuTXPayload.bearing;
 
     // Turn off the debug LED
+    Serial.println("Initialisation complete");
     digitalWriteFast(PIN_LED_DEBUG, LOW);
 }
 
@@ -113,11 +128,12 @@ void loop() {
         bearing = _bearing >= 0 ? _bearing : _bearing + 36000;
     }
 
-    // Read boundary data from STM32 TOF
+    // Read bounds data from STM32 TOF
     TOFTXPayload tofTXPayload;
     if (readPacket(TOF_SERIAL, &tofTXPayload, TOF_TX_PACKET_SIZE,
                    TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE)) {
-        boundary = tofTXPayload.boundary;
+        bounds = tofTXPayload.bounds;
+        bluetoothInboundPayload = tofTXPayload.bluetoothInboundPayload;
     }
 
     // Read ball data from coral
@@ -156,23 +172,24 @@ void loop() {
         Serial.printf("Bearing %03d.%02dº | ", bearing / 100, bearing % 100);
     else
         Serial.printf("Bearing          | ");
-    Serial.print("Boundary ");
-    if (boundary.front != NO_BOUNDARY)
-        Serial.printf("F: %4d ", boundary.front);
+    Serial.print("Bounds ");
+    if (bounds.front != NO_BOUNDS)
+        Serial.printf("F: %4d ", bounds.front);
     else
         Serial.printf("F:      ");
-    if (boundary.back != NO_BOUNDARY)
-        Serial.printf("B: %4d ", boundary.back);
+    if (bounds.back != NO_BOUNDS)
+        Serial.printf("B: %4d ", bounds.back);
     else
         Serial.printf("B:      ");
-    if (boundary.left != NO_BOUNDARY)
-        Serial.printf("L: %4d ", boundary.left);
+    if (bounds.left != NO_BOUNDS)
+        Serial.printf("L: %4d ", bounds.left);
     else
         Serial.printf("L:      ");
-    if (boundary.right != NO_BOUNDARY)
-        Serial.printf("R: %4d ", boundary.right);
+    if (bounds.right != NO_BOUNDS)
+        Serial.printf("R: %4d | ", bounds.right);
     else
-        Serial.printf("R:      ");
+        Serial.printf("R:      | ");
+    Serial.printf("BT Inbound: 0x%02X | ", bluetoothInboundPayload.testByte);
     Serial.println();
     delay(100);
 
@@ -196,5 +213,14 @@ void loop() {
 
     // Actuate outputs
     drive();
+
+    // Write to bluetooth
+    const BluetoothPayload bluetoothOutboundPayload = {
+        .testByte = 0x01,
+    };
+    char buf[sizeof(TOFRXPayload)];
+    memcpy(buf, &bluetoothOutboundPayload, sizeof(bluetoothOutboundPayload));
+    sendPacket(TOF_SERIAL, buf, TOF_RX_PACKET_SIZE, TOF_RX_SYNC_START_BYTE,
+               TOF_RX_SYNC_END_BYTE);
 }
 // ------------------------------- MAIN CODE END -------------------------------
