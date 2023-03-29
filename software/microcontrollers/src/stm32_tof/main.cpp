@@ -76,8 +76,12 @@ void loop() {
     // Read TOF ranges
     for (uint8_t i = 0; i < TOF_COUNT; i++) {
         tofs[i].read();
-        if (tofs[i].ranging_data.range_status == VL53L1X::RangeValid)
+        if (tofs[i].ranging_data.range_status == VL53L1X::RangeValid) {
             bounds.set(i, tofs[i].ranging_data.range_mm);
+            bounds.newData = true;
+        } else if (tofs[i].ranging_data.range_status == VL53L1X::None) {
+            bounds.newData = false;
+        }
     }
 
     // Read bluetooth inbound payload from HC05
@@ -89,6 +93,7 @@ void loop() {
     memcpy(buf + sizeof(bounds), &bluetoothInboundPayload,
            sizeof(bluetoothInboundPayload));
     TeensySerial.sendPacket(buf);
+    bounds.newData = false;
 
     // Read bluetooth outbound payload from Teensy
     TOFRXPayload tofRXPayload;

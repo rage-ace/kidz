@@ -6,9 +6,10 @@
 #include "angle.h"
 #include "config.h"
 #include "stm32_imu/include/config.h"
+#include "util.h"
 
 // State
-int16_t robotAngle;
+RobotAngle robotAngle;
 
 // IMU (Sensor ID, I2C Address, I2C Wire)
 Adafruit_BNO055 bno = Adafruit_BNO055(55, I2C_ADDRESS_BNO055, &Wire);
@@ -132,7 +133,7 @@ void setup() {
     // Check if the STM32 is in calibration mode
     delay(2000);
     IMURXPayload payload;
-    // TeensySerial.readPacket(&payload) // TODO: WHY DOES THIS BUILD ERROR
+    // TeensySerial.readPacket(&payload); // TODO: WHY DOES THIS BUILD ERROR
     TeensySerial.readPacket(nullptr);
     if (payload.calibrating) { // defaults to false
         calibrate();
@@ -154,12 +155,14 @@ void setup() {
 
 void loop() {
     // Read IMU data
-    robotAngle = readRobotAngle();
+    robotAngle.newData = true;
+    robotAngle.angle = readRobotAngle(); // probably blocking
 
     // Send the IMU data over serial to Teensy
     uint8_t buf[sizeof(IMUTXPayload)];
     memcpy(buf, &robotAngle, sizeof(robotAngle));
     TeensySerial.sendPacket(buf);
+    robotAngle.newData = false;
 
     // ------------------------------ START DEBUG ------------------------------
 

@@ -9,7 +9,9 @@
 // #define DEBUG_MUX
 // #define DEBUG_IMU
 // #define DEBUG_TOF
+// #define DEBUG_CORAL
 // #define CALIBRATE_IMU
+// #define CALIBRATE_ROBOT_ANGLE_CONTROLLER
 
 // Macro Flags
 #ifdef DEBUG_TEENSY
@@ -24,7 +26,13 @@
 #ifdef DEBUG_TOF
     #define DEBUG
 #endif
+#ifdef DEBUG_CORAL
+    #define DEBUG
+#endif
 #ifdef CALIBRATE_IMU
+    #define CALIBRATE
+#endif
+#ifdef CALIBRATE_ROBOT_ANGLE_CONTROLLER
     #define CALIBRATE
 #endif
 
@@ -46,7 +54,7 @@
 #define PIN_MOTOR_FL_DIR 9  // Forward is LOW, backward is HIGH
 #define PIN_MOTOR_FR_DIR 10 // Forward is LOW, backward is HIGH
 #define PIN_MOTOR_BL_DIR 11 // Forward is LOW, backward is HIGH
-#define PIN_MOTOR_BR_DIR 12 // Forward is HIGH, backward is LOW
+#define PIN_MOTOR_BR_DIR 12 // Forward is LOW, backward is HIGH
 
 #define PIN_MOTOR_FL_PWM 2
 #define PIN_MOTOR_FR_PWM 3
@@ -75,14 +83,18 @@ SerialManager IMUSerial = SerialManager(
     IMU_TX_SYNC_END_BYTE, IMU_RX_PACKET_SIZE, IMU_RX_SYNC_START_BYTE,
     IMU_RX_SYNC_END_BYTE);
 
+// Sensor Config
+#define LIGHTGATE_THRESHOLD 1200
+
 // Movement Config
 
 // Should ideally be <=1.0F to preserve resolution
 #define ANGULAR_VELOCITY_MULTIPLIER 0.25F
-#define DRIVE_STALL_SPEED           50
-#define DRIVE_MAX_SPEED             1024
+#define DRIVE_STALL_SPEED           (int16_t)50
+#define DRIVE_MAX_SPEED             (int16_t)1024
 
-// #define MOVE_ABOUT_BALL_MULTIPLIER 13.0
+#define BALL_MOVEMENT_A 1e-4F
+#define BALL_MOVEMENT_B 10.0F
 
 // #define STOP_WITHIN_LINE_BALL_RANGE  40
 // #define STOP_WITHIN_LINE_STRENGTH    0.2
@@ -90,9 +102,10 @@ SerialManager IMUSerial = SerialManager(
 // #define ENTER_LINE_SPEED_MULTIPLIER  150.0
 // #define ENTER_LINE_MAX_SPEED         200
 
-// PID Gains
-#define KP_BEARING 0.1F
-#define KI_BEARING 0.0F
-#define KD_BEARING 0.0F
+// PID Constants
+#define KP_ROBOT_ANGLE     3e-3F
+#define KI_ROBOT_ANGLE     1e-9F
+#define KD_ROBOT_ANGLE     1e2F
+#define MIN_DT_ROBOT_ANGLE 5000
 
 #endif

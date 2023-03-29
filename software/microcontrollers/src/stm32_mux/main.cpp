@@ -171,12 +171,14 @@ void setup() {
 
 void loop() {
     // Find the line
+    line.newData = true;
     findLine();
 
     // Send the line data over serial to Teensy
     uint8_t buf[sizeof(MUXTXPayload)];
     memcpy(buf, &line, sizeof(line));
     TeensySerial.sendPacket(buf);
+    line.newData = false;
 
     // TODO: Program a calibration mode
     // printLDRThresholds();

@@ -49,6 +49,7 @@ uint32_t _min_delta = UINT32_MAX;
 uint32_t _max_delta = 0;
 uint64_t _sum_delta = 0;
 uint16_t _iter = 0;
+
 // Get loop time in µs.
 uint32_t printLoopTime(uint16_t sampleCount) {
     const auto now = micros();

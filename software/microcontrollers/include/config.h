@@ -1,23 +1,44 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "serial.h"
 #include <stdint.h>
 
-// NULL values
-#define NO_LINE_INT16 INT16_MAX
-#define NO_LINE_UINT8 UINT8_MAX
-#define NO_ANGLE      INT16_MAX
-#define NO_BOUNDS     UINT16_MAX
+#include "angle.h"
+#include "serial.h"
 
-struct Line {
+// NULL values
+#define NO_LINE_INT16  INT16_MAX
+#define NO_LINE_UINT8  UINT8_MAX
+#define NO_ANGLE       INT16_MAX
+#define NO_BOUNDS      UINT16_MAX
+#define NO_BALL_INT16  INT16_MAX
+#define NO_BALL_UINT16 UINT16_MAX
+
+struct _RenewableData {
+    bool newData = true;
+};
+
+struct Line : _RenewableData {
     int16_t angle = NO_LINE_INT16; // -179(.)99° to 180(.)00°
     uint8_t size = NO_LINE_UINT8;  // 0(.)00 to 1(.)00
 
     bool exists() { return angle != NO_LINE_INT16 && size != NO_LINE_UINT8; }
 };
 
-struct Bounds {
+struct RobotAngle : _RenewableData {
+    int16_t angle = NO_ANGLE; // -179(.)99º to +180(.)00º
+
+    bool exists() { return angle != NO_ANGLE; }
+
+    RobotAngle withOffset(int32_t offset) {
+        RobotAngle newAngle;
+        newAngle.newData = newData;
+        newAngle.angle = clipAngle(angle - offset);
+        return newAngle;
+    }
+};
+
+struct Bounds : _RenewableData {
     uint16_t front = NO_BOUNDS; // 0(.)0 cm to 400(.)0 cm
     uint16_t back = NO_BOUNDS;  // 0(.)0 cm to 400(.)0 cm
     uint16_t left = NO_BOUNDS;  // 0(.)0 cm to 400(.)0 cm
@@ -47,9 +68,26 @@ struct Bounds {
     }
 };
 
-struct BluetoothPayload { // This should be symmetric
+struct Ball : _RenewableData {
+    int16_t angle = NO_BALL_INT16; // -179(.)99° to 180(.)00°
+    uint16_t distance = NO_BALL_UINT16;
+
+    bool exists() {
+        return angle != NO_BALL_INT16 && distance != NO_BALL_UINT16;
+    }
+};
+
+struct BluetoothPayload : _RenewableData { // This should be symmetric
     // TODO
     byte testByte = 0x00;
+
+    // Creates a new BluetoothPayload with newData set as true
+    static BluetoothPayload create(byte testByte) {
+        BluetoothPayload newPayload;
+        newPayload.newData = true;
+        newPayload.testByte = testByte;
+        return newPayload;
+    }
 };
 
 struct MUXTXPayload {
@@ -58,7 +96,7 @@ struct MUXTXPayload {
 struct MUXRXPayload {};
 
 struct IMUTXPayload {
-    int16_t robotAngle = NO_ANGLE;
+    RobotAngle robotAngle;
 };
 struct IMURXPayload {
     bool calibrating = false;
@@ -73,7 +111,7 @@ struct TOFRXPayload {
 };
 
 struct CoralTXPayload {
-    // TODO
+    Ball ball;
 };
 struct CoralRXPayload {};
 
