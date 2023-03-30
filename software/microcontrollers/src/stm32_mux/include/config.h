@@ -48,7 +48,8 @@ SerialManager TeensySerial = SerialManager(
     Serial2, TEENSY_MUX_BAUD_RATE, MUX_RX_PACKET_SIZE, MUX_RX_SYNC_START_BYTE,
     MUX_RX_SYNC_END_BYTE, MUX_TX_PACKET_SIZE, MUX_TX_SYNC_START_BYTE,
     MUX_TX_SYNC_END_BYTE);
-#define DEBUG_SERIAL Serial1
+#define DEBUG_SERIAL  Serial1
+#define TEENSY_SERIAL Serial2
 
 // Light Sensor Config
 enum LDRMUX { MUX1 = 0x00, MUX2 = 0x01 };

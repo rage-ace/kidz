@@ -31,6 +31,7 @@
 #endif
 #ifdef CALIBRATE_IMU
     #define CALIBRATE
+    #define DONT_WAIT_FOR_SUBPROCESSOR_INT
 #endif
 #ifdef CALIBRATE_ROBOT_ANGLE_CONTROLLER
     #define CALIBRATE
@@ -90,8 +91,8 @@ SerialManager IMUSerial = SerialManager(
 
 // Should ideally be <=1.0F to preserve resolution
 #define ANGULAR_VELOCITY_MULTIPLIER 0.25F
-#define DRIVE_STALL_SPEED           (int16_t)50
-#define DRIVE_MAX_SPEED             (int16_t)1024
+#define DRIVE_STALL_SPEED           (int16_t)35
+#define DRIVE_MAX_SPEED             (int16_t)150
 
 #define BALL_MOVEMENT_A 1e-4F
 #define BALL_MOVEMENT_B 10.0F
@@ -103,9 +104,11 @@ SerialManager IMUSerial = SerialManager(
 // #define ENTER_LINE_MAX_SPEED         200
 
 // PID Constants
-#define KP_ROBOT_ANGLE     3e-3F
-#define KI_ROBOT_ANGLE     1e-9F
-#define KD_ROBOT_ANGLE     1e2F
-#define MIN_DT_ROBOT_ANGLE 5000
+
+// kU = 18e-2F
+#define KP_ROBOT_ANGLE     14e-2F
+#define KI_ROBOT_ANGLE     0e-8F
+#define KD_ROBOT_ANGLE     90e2F
+#define MIN_DT_ROBOT_ANGLE 5000 // At least this value for kD to have effect
 
 #endif

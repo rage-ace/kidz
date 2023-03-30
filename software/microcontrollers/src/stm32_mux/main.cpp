@@ -110,10 +110,10 @@ void printLDRThresholds() {
     }
 
     // Print the thresholds (averages of min and max)
-    TeensySerial.printf("Thresholds: {");
+    TEENSY_SERIAL.printf("Thresholds: {");
     for (uint8_t i = 0; i < LDR_COUNT; ++i)
-        TeensySerial.printf("%d, ", (min[i] + max[i]) >> 1);
-    TeensySerial.printf("}\n");
+        TEENSY_SERIAL.printf("%d, ", (min[i] + max[i]) >> 1);
+    TEENSY_SERIAL.printf("}\n");
 }
 
 // DEBUG: Prints detected line data.
@@ -124,18 +124,18 @@ void printLDR() {
     for (uint8_t i = 0; i < LDR_COUNT; ++i) values[i] = readLDR(i);
 
     if (line.exists()) {
-        TeensySerial.printf("%4d.%02dº %01d.%02d |", line.angle / 100,
-                            abs(line.angle % 100), line.size / 100,
-                            line.size % 100);
+        TEENSY_SERIAL.printf("%4d.%02dº %01d.%02d |", line.angle / 100,
+                             abs(line.angle % 100), line.size / 100,
+                             line.size % 100);
     } else {
-        TeensySerial.printf("              |");
+        TEENSY_SERIAL.printf("              |");
     }
     for (uint8_t i = 0; i < LDR_COUNT >> 1; ++i)
-        TeensySerial.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
-    TeensySerial.printf("|");
+        TEENSY_SERIAL.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
+    TEENSY_SERIAL.printf("|");
     for (uint8_t i = LDR_COUNT >> 1; i < LDR_COUNT; ++i)
-        TeensySerial.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
-    TeensySerial.printf("|\n");
+        TEENSY_SERIAL.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
+    TEENSY_SERIAL.printf("|\n");
 }
 
 // ------------------------------ MAIN CODE START ------------------------------

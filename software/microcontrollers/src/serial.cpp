@@ -43,8 +43,9 @@ void SerialManager::redirectBuffer(Stream &serial) {
     if (_serial.available() > 0) serial.write(_serial.read());
 }
 
-// Prints a formatted string to the serial port.
-template <typename... Args>
-void SerialManager::printf(const char *fmt, const Args &...args) {
-    _serial.printf(fmt, args...);
-}
+// TODO: THIS DOES NOT WORK
+// // Prints a formatted string to the serial port.
+// template <typename... Args>
+// void SerialManager::printf(const char *fmt, const Args &...args) {
+//     _serial.printf(fmt, args...);
+// }

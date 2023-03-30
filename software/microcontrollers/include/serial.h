@@ -25,9 +25,10 @@ class SerialManager {
     // Redirect serial
     void redirectBuffer(Stream &serial);
 
-    // Print text
-    template <typename... Args>
-    void printf(const char *fmt, const Args &...args);
+    // TODO: THIS DOES NOT WORK
+    // // Print text
+    // template <typename... Args>
+    // void printf(const char *fmt, const Args &...args);
 
   private:
     HardwareSerial &_serial;

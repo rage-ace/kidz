@@ -56,6 +56,7 @@ SerialManager TeensySerial = SerialManager(
     TOF_TX_SYNC_END_BYTE);
 #define BLUETOOTH_SERIAL Serial3
 #define DEBUG_SERIAL     Serial1
+#define TEENSY_SERIAL    Serial2
 
 // EEPROM Addresses
 

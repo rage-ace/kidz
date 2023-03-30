@@ -6,7 +6,7 @@
 PIDController::PIDController(const float setpoint, const float min,
                              const float max, const float kp, const float ki,
                              const float kd, const uint32_t minDt)
-    : _setpoint(setpoint), _min(min), _max(max), _kp(kp), _ki(ki), _kd(kd),
+    : setpoint(setpoint), _min(min), _max(max), _kp(kp), _ki(ki), _kd(kd),
       _minDt(minDt) {}
 
 // Update controller,
@@ -26,7 +26,7 @@ float PIDController::advance(const float input) {
     _lastTime = now;
 
     // Find PID components
-    const auto error = _setpoint - input;
+    const auto error = setpoint - input;
     _integral += error * dt;
     const auto p = _kp * error;
     const auto i = _ki * _integral;
@@ -47,11 +47,6 @@ float PIDController::advance(const float input) {
     _lastError = error;
 
     return output;
-}
-
-// Update setpoint.
-void PIDController::updateSetpoint(const float setpoint) {
-    _setpoint = setpoint;
 }
 
 // Update limits.
@@ -75,7 +70,7 @@ void PIDController::debugPrint(const char *name, Stream &serial) {
 
     if (name != nullptr) serial.printf("[%s] ", name);
     serial.printf("Setpoint: ");
-    printFloat(_setpoint);
+    printFloat(setpoint);
     serial.printf(" | Input: ");
     printFloat(_lastInput);
     serial.printf(" | Error: ");
@@ -89,11 +84,5 @@ void PIDController::debugPrint(const char *name, Stream &serial) {
     serial.printf(" | D: ");
     printFloat(_lastD);
     serial.printf(" | dt: %4d", _lastDt);
-    serial.printf(" | kP");
-    printFloat(_kp);
-    serial.printf(" | kI");
-    printFloat(_ki);
-    serial.printf(" | kD");
-    printFloat(_kd);
     serial.println();
 }

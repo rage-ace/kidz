@@ -13,15 +13,16 @@ class PIDController {
     float advance(const float input);
 
     // Update parameters
-    void updateSetpoint(const float setpoint);
     void updateLimits(const float min, const float max);
     void updateGains(const float kp, const float ki, const float kd);
 
     void debugPrint(const char *name = nullptr, Stream &serial = Serial);
 
+    // Parameters
+    float setpoint;
+
   private:
     // Parameters
-    float _setpoint;
     float _min;
     float _max;
     float _kp;

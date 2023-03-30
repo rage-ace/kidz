@@ -16,14 +16,14 @@ Ball ball;                                // Read from coral
 bool hasBall = false;
 struct Movement {
     int16_t angle = 0;           // -179(.)99º to +180(.)00º
-    int16_t speed = 0;           // ±50 to ±1024
-    int16_t angularVelocity = 0; // ±200 to ±4096
+    int16_t speed = 0;           // ±35 to ±256
+    int16_t angularVelocity = 0; // ~±140 to ~±1024
 } movement;
 
 // Controllers
 auto robotAngleController =
-    PIDController(0,           // Target angle
-                  -4096, 4096, // Output limits
+    PIDController(0,         // Target angle
+                  -256, 256, // Output limits
                   KP_ROBOT_ANGLE, KI_ROBOT_ANGLE, KD_ROBOT_ANGLE, // Gains
                   MIN_DT_ROBOT_ANGLE                              // min dt
     );
@@ -51,15 +51,15 @@ void drive() {
 
     // Constrain motor speed
     auto constrainSpeed = [](int16_t speed) {
-        if (speed == 0) return speed;
-        return (int16_t)constrain(abs(speed), DRIVE_STALL_SPEED,
-                                  DRIVE_MAX_SPEED);
+        // If the speed is below the stall speed, don't bother moving
+        if (abs(speed) < DRIVE_STALL_SPEED) return 0;
+        return min(abs(speed), DRIVE_MAX_SPEED);
     };
 
     // Set the motor directions and speeds
-    digitalWriteFast(PIN_MOTOR_FL_DIR, FLSpeed > 0 ? LOW : HIGH);
-    digitalWriteFast(PIN_MOTOR_FR_DIR, FRSpeed > 0 ? LOW : HIGH);
-    digitalWriteFast(PIN_MOTOR_BL_DIR, BLSpeed > 0 ? LOW : HIGH);
+    digitalWriteFast(PIN_MOTOR_FL_DIR, FLSpeed > 0 ? HIGH : LOW);
+    digitalWriteFast(PIN_MOTOR_FR_DIR, FRSpeed > 0 ? HIGH : LOW);
+    digitalWriteFast(PIN_MOTOR_BL_DIR, BLSpeed > 0 ? HIGH : LOW);
     digitalWriteFast(PIN_MOTOR_BR_DIR, BRSpeed > 0 ? LOW : HIGH);
     analogWrite(PIN_MOTOR_FL_PWM, constrainSpeed(FLSpeed));
     analogWrite(PIN_MOTOR_FR_PWM, constrainSpeed(FRSpeed));
@@ -135,52 +135,60 @@ void performCalibration() {
     memcpy(buf, &calibrating, sizeof(calibrating));
     IMUSerial.sendPacket(buf);
 
-    int16_t angle = 0;
-    uint32_t time = 0;
+    movement.speed = 100;
+    auto rotateCounter = Counter();
+    auto speedCounter = Counter();
     while (1) {
         // Redirect IMU Serial to monitor
         IMUSerial.redirectBuffer(Serial);
 
-        if (millis() - time >= 10) {
-            time = millis();
-
-            // Drive motors to create magnetometer noise
-            movement.angle = angle;
-            movement.speed = 512;
-            drive();
-
-            // Update angle counter
-            angle += 100;
-            if (angle == 18000) angle = -17900;
+        // Drive motors to create magnetometer noise
+        if (speedCounter.millisElapsed(100)) {
+            movement.speed = -movement.speed;
         }
-    }
-#endif
-
-#ifdef CALIBRATE_ROBOT_ANGLE_CONTROLLER
-    auto rotateCounter = Counter();
-    while (1) {
-        // Read all sensor values
-        readSensors();
-
-        // Keep straight
-        if (robotAngle.newData)
-            movement.angularVelocity =
-                robotAngleController.advance(robotAngle.angle);
-
-        // Spin in a circle
-        movement.speed = 100;
-        if (rotateCounter.millisElapsed(10)) {
+        if (rotateCounter.millisElapsed(1)) {
             if (movement.angle == 18000)
                 movement.angle = -17000;
             else
                 movement.angle += 100;
         }
+        drive();
+    }
+#endif
+
+#ifdef CALIBRATE_ROBOT_ANGLE_CONTROLLER
+    auto circleCounter = Counter();
+    auto rotateCounter = Counter();
+    while (10) {
+        // Read all sensor values
+        readSensors();
+
+        // Keep straight
+        if (robotAngle.exists() && robotAngle.newData) {
+            movement.angularVelocity =
+                robotAngleController.advance(robotAngle.angle);
+
+            // Print controller info
+            robotAngleController.debugPrint("Robot Angle");
+        }
+
+        // Spin in a circle
+        movement.speed = 80;
+        if (circleCounter.millisElapsed(4)) {
+            if (movement.angle == 18000)
+                movement.angle = -17000;
+            else
+                movement.angle += 100;
+        }
+        if (rotateCounter.millisElapsed(50)) {
+            if (robotAngleController.setpoint == 18000)
+                robotAngleController.setpoint = -17000;
+            else
+                robotAngleController.setpoint += 100;
+        }
 
         // Actuate outputs
         drive();
-
-        // Print controller info
-        robotAngleController.debugPrint("Robot Angle");
     }
 #endif
 }
@@ -299,7 +307,7 @@ void setup() {
     TOFSerial.setup(true);
     CoralSerial.setup(true);
 
-#ifndef CALIBRATE // Don't wait for everything to initialise if calibrating
+#ifndef DONT_WAIT_FOR_SUBPROCESSOR_INT
     waitForSubprocessorInit(); // this is obviously blocking
 #endif
 
@@ -318,7 +326,7 @@ void loop() {
     readSensors();
 
     // Keep straight
-    if (robotAngle.newData)
+    if (robotAngle.exists() && robotAngle.newData)
         movement.angularVelocity =
             robotAngleController.advance(robotAngle.angle);
 
@@ -333,8 +341,7 @@ void loop() {
             // moving away from the ball.
             constrain(ball.angle, -9000, 9000) *
             // The angle offset undergoes exponential decay. As the ball gets
-            // closer to the direct front of the robot, the robot moves more
-            // directly at the ball.
+            // closer to the robot, the robot moves more directly at the ball.
             fmin(BALL_MOVEMENT_A * pow(exp(1), BALL_MOVEMENT_B * ball.distance),
                  1.0);
         // Then, we pack it into instructions for our drive function.
