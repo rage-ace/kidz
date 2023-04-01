@@ -1,10 +1,12 @@
 #include <Adafruit_BNO055.h>
 #include <Arduino.h>
 #include <EEPROM.h>
+#include <PacketSerial.h>
 #include <Wire.h>
+#include <array>
 
 #include "angle.h"
-#include "config.h"
+#include "shared_config.h"
 #include "stm32_imu/include/config.h"
 #include "util.h"
 
@@ -12,10 +14,7 @@
 IMUData imuData;
 
 // Serial managers
-SerialManager TeensySerial = SerialManager(
-    TEENSY_SERIAL, TEENSY_IMU_BAUD_RATE, IMU_RX_PACKET_SIZE,
-    IMU_RX_SYNC_START_BYTE, IMU_RX_SYNC_END_BYTE, IMU_TX_PACKET_SIZE,
-    IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE);
+PacketSerial teensySerial;
 
 // IMU (Sensor ID, I2C Address, I2C Wire)
 Adafruit_BNO055 bno = Adafruit_BNO055(55, I2C_ADDRESS_BNO055, &Wire);
@@ -102,6 +101,17 @@ void calibrate() {
 }
 
 // ------------------------------ MAIN CODE START ------------------------------
+void onTeensyPacket(const byte *buf, size_t size) {
+    MUXRXPayload payload;
+    memcpy(&payload, buf, sizeof(payload));
+
+    // If the STM32 is in calibration mode, run the BNO055 calibration routine
+    if (payload.calibrating) { // defaults to false
+        calibrate();
+        while (1) {};
+    }
+}
+
 void setup() {
     // Turn on the debug LED
     pinMode(PIN_LED_DEBUG, OUTPUT);
@@ -112,11 +122,13 @@ void setup() {
     Wire.setSCL(PIN_SCL_IMU);
 
     // Initialise serial
-    TeensySerial.setup(true);
+    TEENSY_SERIAL.begin(TEENSY_IMU_BAUD_RATE);
 #ifdef DEBUG
     DEBUG_SERIAL.begin(DEBUG_BAUD_RATE);
     while (!DEBUG_SERIAL) delay(10);
 #endif
+    teensySerial.setStream(&TEENSY_SERIAL);
+    teensySerial.setPacketHandler(&onTeensyPacket);
 
     // Initialise I2C
     Wire.begin();
@@ -138,15 +150,6 @@ void setup() {
     bno.setExtCrystalUse(false); // we do not have an external crystal
     bno.setMode(OPERATION_MODE_IMUPLUS);
 
-    // Check if the STM32 is in calibration mode
-    delay(2000);
-    IMURXPayload payload;
-    TeensySerial.readPacket(&payload);
-    if (payload.calibrating) { // defaults to false
-        calibrate();
-        while (1) {};
-    }
-
     // Attempt to load IMU offsets
     bool hasOffsets;
     EEPROM.get(EEPROM_ADDRESS_HAS_OFFSETS, hasOffsets);
@@ -166,9 +169,9 @@ void loop() {
     imuData.robotAngle = readRobotAngle(); // probably blocking
 
     // Send the IMU data over serial to Teensy
-    uint8_t buf[sizeof(IMUTXPayload)];
+    byte buf[sizeof(IMUTXPayload)];
     memcpy(buf, &imuData, sizeof(imuData));
-    TeensySerial.sendPacket(buf);
+    teensySerial.send(buf, sizeof(buf));
     imuData.newData = false;
 
     // ------------------------------ START DEBUG ------------------------------

@@ -1,10 +1,10 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <array>
 #include <cstdint>
 
 #include "angle.h"
-#include "serial.h"
 
 // NULL values
 #define NO_LINE_INT16  INT16_MAX
@@ -19,35 +19,47 @@ struct _RenewableData {
     bool newData = true;
 };
 struct LineData : _RenewableData {
-    int16_t angle = NO_LINE_INT16; // -179(.)99° to 180(.)00°
-    uint8_t size = NO_LINE_UINT8;  // 0(.)00 to 1(.)00
+    int16_t angleBisector = NO_LINE_INT16; // -179(.)99° to 180(.)00°
+    uint8_t size = NO_LINE_UINT8;          // 0(.)00 to 1(.)00
 
-    bool exists() { return angle != NO_LINE_INT16 && size != NO_LINE_UINT8; }
+    bool exists() {
+        return angleBisector != NO_LINE_INT16 && size != NO_LINE_UINT8;
+    }
 };
 struct IMUData : _RenewableData {
     int16_t robotAngle = NO_ANGLE; // -179(.)99º to +180(.)00º
 };
-struct BoundsData : _RenewableData {
-    uint16_t front = NO_BOUNDS; // 0(.)0 cm to 400(.)0 cm
-    uint16_t back = NO_BOUNDS;  // 0(.)0 cm to 400(.)0 cm
-    uint16_t left = NO_BOUNDS;  // 0(.)0 cm to 400(.)0 cm
-    uint16_t right = NO_BOUNDS; // 0(.)0 cm to 400(.)0 cm
+struct BoundsData {
+    struct Bound : _RenewableData {
+        uint16_t value = NO_BOUNDS; // 0(.)0 cm to 400(.)0 cm
+    } front, back, left, right;
 
-    void set(uint8_t index, uint16_t value) {
+    void set(uint8_t index, uint16_t value = NO_BOUNDS) {
         switch (index) {
         case 0:
-            front = value;
+            front.value = value;
+            front.newData = value != NO_BOUNDS;
             break;
         case 1:
-            back = value;
+            back.value = value;
+            back.newData = value != NO_BOUNDS;
             break;
         case 2:
-            left = value;
+            left.value = value;
+            left.newData = value != NO_BOUNDS;
             break;
         case 3:
-            right = value;
+            right.value = value;
+            right.newData = value != NO_BOUNDS;
             break;
         }
+    }
+
+    void markAsOld() {
+        front.newData = false;
+        back.newData = false;
+        left.newData = false;
+        right.newData = false;
     }
 };
 struct CameraData : _RenewableData {
@@ -71,7 +83,11 @@ struct BluetoothPayload : _RenewableData { // This should be symmetric
 struct MUXTXPayload {
     LineData line;
 };
-struct MUXRXPayload {};
+struct MUXRXPayload {
+    bool calibrating = false;
+    // I couldn't find a way to send the thresholds over serial reliably ;-;
+    // TODO: Try adding a CRC check?
+};
 
 struct IMUTXPayload {
     IMUData imu;
@@ -94,43 +110,12 @@ struct CoralTXPayload {
 struct CoralRXPayload {};
 
 // Shared serial information
-#define MONITOR_BAUD_RATE      115200
-#define TEENSY_MUX_BAUD_RATE   115200
-#define TEENSY_IMU_BAUD_RATE   115200
-#define TEENSY_TOF_BAUD_RATE   115200
-#define TEENSY_CORAL_BAUD_RATE 115200
-
-#define MUX_TX_PACKET_SIZE     sizeof(MUXTXPayload) + 2U
-#define MUX_TX_SYNC_START_BYTE 0b11010110
-#define MUX_TX_SYNC_END_BYTE   0b00110010
-
-#define MUX_RX_PACKET_SIZE     sizeof(MUXRXPayload) + 2U
-#define MUX_RX_SYNC_START_BYTE 0b11010110
-#define MUX_RX_SYNC_END_BYTE   0b00110010
-
-#define IMU_TX_PACKET_SIZE     sizeof(IMUTXPayload) + 2U
-#define IMU_TX_SYNC_START_BYTE 0b11010110
-#define IMU_TX_SYNC_END_BYTE   0b00110010
-
-#define IMU_RX_PACKET_SIZE     sizeof(IMURXPayload) + 2U
-#define IMU_RX_SYNC_START_BYTE 0b11010110
-#define IMU_RX_SYNC_END_BYTE   0b00110010
-
-#define TOF_TX_PACKET_SIZE     sizeof(TOFTXPayload) + 2U
-#define TOF_TX_SYNC_START_BYTE 0b11010110
-#define TOF_TX_SYNC_END_BYTE   0b00110010
-
-#define TOF_RX_PACKET_SIZE     sizeof(TOFRXPayload) + 2U
-#define TOF_RX_SYNC_START_BYTE 0b11010110
-#define TOF_RX_SYNC_END_BYTE   0b00110010
-
-#define CORAL_TX_PACKET_SIZE     sizeof(CoralTXPayload) + 2U
-#define CORAL_TX_SYNC_START_BYTE 0b11010110
-#define CORAL_TX_SYNC_END_BYTE   0b00110010
-
-#define CORAL_RX_PACKET_SIZE     sizeof(CoralRXPayload) + 2U
-#define CORAL_RX_SYNC_START_BYTE 0b11010110
-#define CORAL_RX_SYNC_END_BYTE   0b00110010
+#define MONITOR_BAUD_RATE 115200
+// 1M baud works, 2M doesn't
+#define TEENSY_MUX_BAUD_RATE   1000000
+#define TEENSY_IMU_BAUD_RATE   1000000
+#define TEENSY_TOF_BAUD_RATE   1000000
+#define TEENSY_CORAL_BAUD_RATE 1000000
 
 // Loop times (measured on 2023-03-18)
 // #define _TEENSY_LOOP_TIME 0U // in µs, default:   260 (min=  172, max=  348)

@@ -1,18 +1,17 @@
 #include <Arduino.h>
+#include <PacketSerial.h>
+#include <array>
 
 #include "angle.h"
-#include "config.h"
-#include "serial.h"
+#include "shared_config.h"
 #include "stm32_mux/include/config.h"
 
 // State
 struct LineData line;
+std::array<uint16_t, LDR_COUNT> activatedCount;
 
-// Serial managers
-SerialManager TeensySerial = SerialManager(
-    TEENSY_SERIAL, TEENSY_MUX_BAUD_RATE, MUX_RX_PACKET_SIZE,
-    MUX_RX_SYNC_START_BYTE, MUX_RX_SYNC_END_BYTE, MUX_TX_PACKET_SIZE,
-    MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE);
+// Serial
+PacketSerial teensySerial;
 
 // Sets an LDR MUX to select a specific channel.
 void selectLDRMUXChannel(LDRMUX mux, uint8_t channel) {
@@ -28,7 +27,6 @@ void selectLDRMUXChannel(LDRMUX mux, uint8_t channel) {
         digitalWrite(PIN_LDRMUX2_S2, (channel >> 2) & 1);
         digitalWrite(PIN_LDRMUX2_S3, (channel >> 3) & 1);
     }
-    delayMicroseconds(1); // TODO: Figure out how long of a delay I need
 }
 
 // Reads the value of an LDR 0-indexed counting clockwise from 000º.
@@ -40,11 +38,19 @@ uint16_t readLDR(uint8_t index) {
 
 // Finds the position of the line.
 void findLine() {
+    // Read LDRs, the LDRs need to be activated for a while to reduce noise
+    for (uint8_t i = 0; i < LDR_COUNT; ++i) {
+        if (readLDR(i) > LDR_THRESHOLDS[i]) {
+            if (activatedCount[i] != UINT16_MAX) ++activatedCount[i];
+        } else
+            activatedCount[i] = 0;
+    }
+
     // Get the matches (to the line)
     uint8_t matchCount = 0;
     uint8_t matches[LDR_COUNT];
     for (uint8_t i = 0; i < LDR_COUNT; ++i) {
-        if (readLDR(i) > LDR_THRESHOLDS[i]) {
+        if (activatedCount[i] >= LDR_ACTIVATION_THRESHOLD) {
             matches[matchCount] = i;
             ++matchCount;
         }
@@ -52,7 +58,7 @@ void findLine() {
 
     // No match (to the line) was found
     if (matchCount == 0) {
-        line.angle = NO_LINE_INT16;
+        line.angleBisector = NO_LINE_INT16;
         line.size = NO_LINE_UINT8;
         return;
     }
@@ -78,7 +84,7 @@ void findLine() {
 
     // No cluster was found
     if (clusterStart == LDR_COUNT) {
-        line.angle = NO_LINE_INT16;
+        line.angleBisector = NO_LINE_INT16;
         line.size = NO_LINE_UINT8;
         return;
     }
@@ -88,10 +94,9 @@ void findLine() {
     const auto clusterEndAngle = LDR_BEARINGS[clusterEnd];
     const auto clusterMidpoint =
         bearingMidpoint(clusterStartAngle, clusterEndAngle);
-    const auto rawLineBearing = clipBearing(clusterMidpoint - 90.0);
 
     // Sets lineAngle as perpendicular to angle of the midpoint of cluster ends
-    line.angle = bearingToAngle(rawLineBearing);
+    line.angleBisector = bearingToAngle(clusterMidpoint);
     // Sets lineSize as the ratio of the cluster size to 180°
     line.size = roundf(
         (smallerBearingDiff(clusterStartAngle, clusterEndAngle) / 180.0F) *
@@ -131,21 +136,38 @@ void printLDR() {
     for (uint8_t i = 0; i < LDR_COUNT; ++i) values[i] = readLDR(i);
 
     if (line.exists()) {
-        TEENSY_SERIAL.printf("%4d.%02dº %01d.%02d |", line.angle / 100,
-                             abs(line.angle % 100), line.size / 100,
+        TEENSY_SERIAL.printf("%4d.%02dº %01d.%02d |", line.angleBisector / 100,
+                             abs(line.angleBisector % 100), line.size / 100,
                              line.size % 100);
     } else {
         TEENSY_SERIAL.printf("              |");
     }
-    for (uint8_t i = 0; i < LDR_COUNT >> 1; ++i)
+    for (uint8_t i = 0; i < LDR_COUNT / 2; ++i)
         TEENSY_SERIAL.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
     TEENSY_SERIAL.printf("|");
-    for (uint8_t i = LDR_COUNT >> 1; i < LDR_COUNT; ++i)
+    for (uint8_t i = LDR_COUNT / 2; i < LDR_COUNT; ++i)
         TEENSY_SERIAL.printf("%s", values[i] > LDR_THRESHOLDS[i] ? "1" : " ");
-    TEENSY_SERIAL.printf("|\n");
+    TEENSY_SERIAL.printf("| ");
+    for (uint8_t i = 0; i < LDR_COUNT / 2; ++i)
+        TEENSY_SERIAL.printf("%4d ", values[i]);
+    TEENSY_SERIAL.printf("| ");
+    for (uint8_t i = LDR_COUNT / 2; i < LDR_COUNT; ++i)
+        TEENSY_SERIAL.printf("%4d ", values[i]);
+    TEENSY_SERIAL.printf("\n");
 }
 
 // ------------------------------ MAIN CODE START ------------------------------
+void onTeensyPacket(const byte *buf, size_t size) {
+    MUXRXPayload payload;
+    memcpy(&payload, buf, sizeof(payload));
+
+    // If the STM32 is in calibration mode, print the thresholds
+    if (payload.calibrating) { // defaults to false
+        TEENSY_SERIAL.println("Calibrating...");
+        while (1) printLDRThresholds();
+    }
+}
+
 void setup() {
     // Turn on the debug LED
     pinMode(PIN_LED_DEBUG, OUTPUT);
@@ -166,31 +188,37 @@ void setup() {
     analogReadResolution(12);
 
     // Initialise serial
-    TeensySerial.setup(true);
+    TEENSY_SERIAL.begin(TEENSY_MUX_BAUD_RATE);
 #ifdef DEBUG
     DEBUG_SERIAL.begin(DEBUG_BAUD_RATE);
     while (!DEBUG_SERIAL) delay(10);
 #endif
+    teensySerial.setStream(&TEENSY_SERIAL);
+    teensySerial.setPacketHandler(&onTeensyPacket);
+
+    // Line data is always new
+    line.newData = true;
 
     // Turn off the debug LED
     digitalWrite(PIN_LED_DEBUG, LOW);
 }
 
 void loop() {
+    // Read packets from serial
+    teensySerial.update();
+
     // Find the line
-    line.newData = true;
     findLine();
 
     // Send the line data over serial to Teensy
-    uint8_t buf[sizeof(MUXTXPayload)];
+    byte buf[sizeof(MUXTXPayload)];
     memcpy(buf, &line, sizeof(line));
-    TeensySerial.sendPacket(buf);
-    line.newData = false;
-
-    // TODO: Program a calibration mode
-    // printLDRThresholds();
+    teensySerial.send(buf, sizeof(buf));
 
     // ------------------------------ START DEBUG ------------------------------
+    // // Print LDR data
+    // printLDR();
+
     // // Print loop time
     // printLoopTime();
     // ------------------------------- END DEBUG -------------------------------

@@ -2,6 +2,9 @@
 #define TEENSY_CONFIG_H
 
 #include <HardwareSerial.h>
+#include <array>
+
+#include "shared_config.h"
 
 // Flags
 #define DEBUG_TEENSY
@@ -10,6 +13,7 @@
 // #define DEBUG_TOF
 // #define DEBUG_CORAL
 // #define CALIBRATE_IMU
+// #define CALIBRATE_MUX
 // #define CALIBRATE_ROBOT_ANGLE_CONTROLLER
 
 // Macro Flags
@@ -30,7 +34,11 @@
 #endif
 #ifdef CALIBRATE_IMU
     #define CALIBRATE
-    #define DONT_WAIT_FOR_SUBPROCESSOR_INT
+    #define DONT_WAIT_FOR_SUBPROCESSOR_INIT
+#endif
+#ifdef CALIBRATE_MUX
+    #define CALIBRATE
+    #define DONT_WAIT_FOR_SUBPROCESSOR_INIT
 #endif
 #ifdef CALIBRATE_ROBOT_ANGLE_CONTROLLER
     #define CALIBRATE
@@ -76,7 +84,6 @@
 #define LIGHTGATE_THRESHOLD 1200
 
 // Movement Config
-
 #define DRIVE_STALL_SPEED (int16_t)35
 #define DRIVE_MAX_SPEED   (int16_t)150
 
@@ -90,7 +97,6 @@
 // #define ENTER_LINE_MAX_SPEED         200
 
 // PID Constants
-
 // kU = 18e-2F
 #define KP_ROBOT_ANGLE     14e0F
 #define KI_ROBOT_ANGLE     0e-6F

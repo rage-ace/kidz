@@ -2,11 +2,9 @@
 #define STM32_TOF_CONFIG_H
 
 #include <VL53L1X.h>
+#include <array>
 #include <cstdint>
 #include <stm32f103c_variant_generic.h>
-
-#include "config.h"
-#include "serial.h"
 
 // #define DEBUG
 
@@ -68,11 +66,11 @@ struct TOFConfig {
 };
 
 #define TOF_COUNT 4
-const TOFConfig TOF_CONFIGS[TOF_COUNT] = {
+const std::array<TOFConfig, TOF_COUNT> TOF_CONFIGS = {{
     {PIN_XSHUT_FRONT, VL53L1X::Short, 33000, 33}, // Front
     {PIN_XSHUT_BACK, VL53L1X::Short, 33000, 33},  // Back
     {PIN_XSHUT_LEFT, VL53L1X::Short, 20000, 20},  // Left
-    {PIN_XSHUT_RIGHT, VL53L1X::Short, 20000, 20}, // Right
-};
+    {PIN_XSHUT_RIGHT, VL53L1X::Short, 20000, 20} // Right
+}};
 
 #endif

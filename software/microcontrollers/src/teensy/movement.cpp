@@ -34,6 +34,16 @@ void Movement::updateHeadingController(float angle) {
 
 // Writes the current movement data to the motors.
 void Movement::drive() {
+    if (stop) {
+        // Stop the motors
+        analogWrite(PIN_MOTOR_FL_PWM, 0);
+        analogWrite(PIN_MOTOR_FR_PWM, 0);
+        analogWrite(PIN_MOTOR_BL_PWM, 0);
+        analogWrite(PIN_MOTOR_BR_PWM, 0);
+        stop = false;
+        return;
+    }
+
     // Convert polar to cartesian
     const auto x = sinf(angle * M_PI / 180);
     const auto y = cosf(angle * M_PI / 180);

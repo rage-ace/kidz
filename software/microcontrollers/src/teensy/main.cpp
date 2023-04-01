@@ -1,32 +1,21 @@
 #include <Arduino.h>
+#include <PacketSerial.h>
 
-#include "config.h"
 #include "counter.h"
 #include "pid.h"
+#include "shared_config.h"
 #include "teensy/include/config.h"
 #include "teensy/include/movement.h"
 #include "teensy/include/sensors.h"
 
-// Serial managers
-auto MUXSerial = SerialManager(MUX_SERIAL, TEENSY_MUX_BAUD_RATE,
-                               MUX_TX_PACKET_SIZE, MUX_TX_SYNC_START_BYTE,
-                               MUX_TX_SYNC_END_BYTE, MUX_RX_PACKET_SIZE,
-                               MUX_RX_SYNC_START_BYTE, MUX_RX_SYNC_END_BYTE);
-auto TOFSerial = SerialManager(TOF_SERIAL, TEENSY_TOF_BAUD_RATE,
-                               TOF_TX_PACKET_SIZE, TOF_TX_SYNC_START_BYTE,
-                               TOF_TX_SYNC_END_BYTE, TOF_RX_PACKET_SIZE,
-                               TOF_RX_SYNC_START_BYTE, TOF_RX_SYNC_END_BYTE);
-auto IMUSerial = SerialManager(IMU_SERIAL, TEENSY_IMU_BAUD_RATE,
-                               IMU_TX_PACKET_SIZE, IMU_TX_SYNC_START_BYTE,
-                               IMU_TX_SYNC_END_BYTE, IMU_RX_PACKET_SIZE,
-                               IMU_RX_SYNC_START_BYTE, IMU_RX_SYNC_END_BYTE);
-auto CoralSerial = SerialManager(
-    CORAL_SERIAL, TEENSY_CORAL_BAUD_RATE, CORAL_TX_PACKET_SIZE,
-    CORAL_TX_SYNC_START_BYTE, CORAL_TX_SYNC_END_BYTE, CORAL_RX_PACKET_SIZE,
-    CORAL_RX_SYNC_START_BYTE, CORAL_RX_SYNC_END_BYTE);
+// Serial
+PacketSerial muxSerial;
+PacketSerial tofSerial;
+PacketSerial imuSerial;
+PacketSerial coralSerial;
 
 // IO
-auto sensors = Sensors(MUXSerial, IMUSerial, TOFSerial, CoralSerial);
+auto sensors = Sensors(muxSerial, tofSerial, imuSerial, coralSerial);
 auto movement = Movement();
 
 // Counters
@@ -37,16 +26,17 @@ void performCalibration() {
     // CALIBRATE IMU
     // Set STM32 IMU to calibration mode
     const bool calibrating = true;
-    char buf[sizeof(IMURXPayload)];
+    byte buf[sizeof(IMURXPayload)];
     memcpy(buf, &calibrating, sizeof(calibrating));
-    IMUSerial.sendPacket(buf);
+    // Send 100 times to ensure it gets through
+    for (int i = 0; i < 100; i++) imuSerial.send(buf, sizeof(buf));
 
     movement.speed = 100;
     auto rotateCounter = Counter();
     auto speedCounter = Counter();
     while (1) {
         // Redirect IMU Serial to monitor
-        IMUSerial.redirectBuffer(Serial);
+        while (imuSerial.available() > 0) Serial.write(imuSerial.read());
 
         // Drive motors to create magnetometer noise
         if (speedCounter.millisElapsed(100)) {
@@ -61,19 +51,32 @@ void performCalibration() {
         movement.drive();
     }
 #endif
+#ifdef CALIBRATE_MUX
+    // CALIBRATE MUX
+    // Set STM32 MUX to calibration mode
+    const bool calibrating = true;
+    byte buf[sizeof(MUXRXPayload)];
+    memcpy(buf, &calibrating, sizeof(calibrating));
+    // Send 100 times to ensure it gets through
+    for (int i = 0; i < 100; i++) muxSerial.send(buf, sizeof(buf));
 
+    while (1) {
+        // Redirect MUX Serial to monitor
+        while (MUX_SERIAL.available() > 0) Serial.write(MUX_SERIAL.read());
+    }
+#endif
 #ifdef CALIBRATE_ROBOT_ANGLE_CONTROLLER
     auto circleCounter = Counter();
     auto rotateCounter = Counter();
-    auto controller =
-        PIDController(0,         // Target angle
-                      -256, 256, // Output limits
-                      KP_ROBOT_ANGLE, KI_ROBOT_ANGLE, KD_ROBOT_ANGLE, // Gains
-                      MIN_DT_ROBOT_ANGLE                              // min dt
-        );
+    auto controller = PIDController(0,         // Target angle
+                                    -256, 256, // Output limits
+                                    KP_ROBOT_ANGLE, KI_ROBOT_ANGLE,
+                                    KD_ROBOT_ANGLE,    // Gains
+                                    MIN_DT_ROBOT_ANGLE // min dt
+    );
     while (10) {
         // Read all sensor values
-        senors.read();
+        sensors.read();
 
         // Keep straight
         if (sensors.robot.newData) {
@@ -107,58 +110,56 @@ void performCalibration() {
 void performDebug() {
 #ifdef DEBUG_MUX
     // Redirect MUX Serial to monitor
-    MUXSerial.redirectBuffer(Serial);
+    while (MUX_SERIAL.available() > 0) Serial.write(MUX_SERIAL.read());
 #endif
-
-#ifdef DEBUG_IMU
-    // Redirect IMU Serial to monitor
-    IMUSerial.redirectBuffer(Serial);
-#endif
-
 #ifdef DEBUG_TOF
     // Redirect TOF Serial to monitor
-    TOFSerial.redirectBuffer(Serial);
+    while (TOF_SERIAL.available() > 0) Serial.write(TOF_SERIAL.read());
+#endif
+#ifdef DEBUG_IMU
+    // Redirect IMU Serial to monitor
+    while (IMU_SERIAL.available() > 0) Serial.write(IMU_SERIAL.read());
 #endif
 #ifdef DEBUG_CORAL
     // Redirect Coral Serial to monitor
-    CoralSerial.redirectBuffer(Serial);
+    while (CORAL_SERIAL.available() > 0) Serial.write(CORAL_SERIAL.read());
 #endif
 
 #ifdef DEBUG_TEENSY
     if (debugPrintCounter.millisElapsed(100)) {
         // Print debug data
+        Serial.printf("Line ");
         if (sensors.line.exists())
-            Serial.printf("Line %4d.%02dº %01d.%02d | ",
-                          (int)sensors.line.angle,
-                          abs((int)(sensors.line.angle * 100) % 100),
-                          (int)sensors.line.depth,
-                          abs((int)(sensors.line.depth * 100) % 100));
+            Serial.printf("%4d.%02dº ", (int)sensors.line.angleBisector,
+                          abs((int)(sensors.line.angleBisector * 100) % 100));
         else
-            Serial.printf("Line             | ");
-        if (sensors.robot.exists())
+            Serial.printf("         ");
+        Serial.printf("%01d.%02d | ", (int)sensors.line.depth,
+                      abs((int)(sensors.line.depth * 100) % 100));
+        if (sensors.robot.established())
             Serial.printf("Robot Angle %4d.%02dº | ", (int)sensors.robot.angle,
                           abs((int)(sensors.robot.angle * 100) % 100));
         else
             Serial.printf("Robot Angle          | ");
         Serial.print("Bounds ");
-        if (sensors.bounds.front != NO_BOUNDS)
-            Serial.printf("F: %3d.%1d cm ", (int)sensors.bounds.front,
-                          abs((int)(sensors.bounds.front * 10) % 10));
+        if (sensors.bounds.front.established())
+            Serial.printf("F: %3d.%1d cm ", (int)sensors.bounds.front.value,
+                          abs((int)(sensors.bounds.front.value * 10) % 10));
         else
             Serial.printf("F:          ");
-        if (sensors.bounds.back != NO_BOUNDS)
-            Serial.printf("B: %3d.%1d cm ", (int)sensors.bounds.back,
-                          abs((int)(sensors.bounds.back * 10) % 10));
+        if (sensors.bounds.back.established())
+            Serial.printf("B: %3d.%1d cm ", (int)sensors.bounds.back.value,
+                          abs((int)(sensors.bounds.back.value * 10) % 10));
         else
             Serial.printf("B:          ");
-        if (sensors.bounds.left != NO_BOUNDS)
-            Serial.printf("L: %3d.%1d cm ", (int)sensors.bounds.left,
-                          abs((int)(sensors.bounds.left * 10) % 10));
+        if (sensors.bounds.left.established())
+            Serial.printf("L: %3d.%1d cm ", (int)sensors.bounds.left.value,
+                          abs((int)(sensors.bounds.left.value * 10) % 10));
         else
             Serial.printf("L:          ");
-        if (sensors.bounds.right != NO_BOUNDS)
-            Serial.printf("R: %3d.%1d cm | ", (int)sensors.bounds.right,
-                          abs((int)(sensors.bounds.right * 10) % 10));
+        if (sensors.bounds.right.established())
+            Serial.printf("R: %3d.%1d cm | ", (int)sensors.bounds.right.value,
+                          abs((int)(sensors.bounds.right.value * 10) % 10));
         else
             Serial.printf("R:          | ");
         if (sensors.ball.exists())
@@ -200,6 +201,25 @@ void setup() {
     // Initialise motors and sensors and wait for completion
     movement.init();
     sensors.init();
+#ifndef DEBUG_MUX
+    muxSerial.setPacketHandler(
+        [](const byte *buf, size_t size) { sensors.onMuxPacket(buf, size); });
+#endif
+#ifndef DEBUG_TOF
+    tofSerial.setPacketHandler(
+        [](const byte *buf, size_t size) { sensors.onTofPacket(buf, size); });
+#endif
+#ifndef DEBUG_IMU
+    imuSerial.setPacketHandler(
+        [](const byte *buf, size_t size) { sensors.onImuPacket(buf, size); });
+#endif
+#ifndef DEBUG_CORAL
+    coralSerial.setPacketHandler(
+        [](const byte *buf, size_t size) { sensors.onCoralPacket(buf, size); });
+#endif
+#ifndef DONT_WAIT_FOR_SUBPROCESSOR_INIT
+    sensors.waitForSubprocessorInit();
+#endif
 
     // Turn off the debug LED
     Serial.println("Initialisation complete");
@@ -221,16 +241,18 @@ void loop() {
 
     // Move about the balls
     if (sensors.ball.exists()) {
-        // We can't just move straight at the ball. We need to move behind it in
-        // a curve. Here, we calculate the angle offset we need to achieve this.
+        // We can't just move straight at the ball. We need to move behind
+        // it in a curve. Here, we calculate the angle offset we need to
+        // achieve this.
         const auto angleOffset =
-            // The angle offset is directly related to the angle of the ball,
-            // but we constrain it to 90º because the robot should never move
-            // in a range greater than 90º away from the ball, as it would be
-            // moving away from the ball.
+            // The angle offset is directly related to the angle of the
+            // ball, but we constrain it to 90º because the robot should
+            // never move in a range greater than 90º away from the ball, as
+            // it would be moving away from the ball.
             constrain(sensors.ball.angle, -9000, 9000) *
-            // The angle offset undergoes exponential decay. As the ball gets
-            // closer to the robot, the robot moves more directly at the ball.
+            // The angle offset undergoes exponential decay. As the ball
+            // gets closer to the robot, the robot moves more directly at
+            // the ball.
             fmin(BALL_MOVEMENT_A *
                      pow(exp(1), BALL_MOVEMENT_B * sensors.ball.distance),
                  1.0);
@@ -240,7 +262,7 @@ void loop() {
         movement.velocity = 100;
     } else {
         // If we don't see the ball, we don't move.
-        // TODO: Find a better course of action.
+        // TODO: Move to the center of the field
         movement.angle = 0;
         movement.velocity = 0;
     }
@@ -249,7 +271,17 @@ void loop() {
     // TODO
 
     // Avoid the lines
-    // TODO
+    if (sensors.line.newData && sensors.line.exists()) {
+        if (sensors.line.depth < 0.3) {
+            // Stop inside the line to prevent jerking
+            movement.stop = true;
+            // TODO: Line track towards the ball
+        } else {
+            // Move away from the line
+            movement.angle = sensors.line.angleBisector;
+            movement.velocity = sensors.line.depth * 255;
+        }
+    }
 
 #ifdef DEBUG
     // Runs any debug code if the corresponding flag is defined
@@ -261,9 +293,9 @@ void loop() {
 
     // Write to bluetooth
     auto bluetoothOutboundPayload = BluetoothPayload::create(0x01);
-    char buf[sizeof(TOFRXPayload)];
+    byte buf[sizeof(TOFRXPayload)];
     memcpy(buf, &bluetoothOutboundPayload, sizeof(bluetoothOutboundPayload));
-    TOFSerial.sendPacket(buf);
+    tofSerial.send(buf, sizeof(buf));
 
     // Mark all sensor data as old
     sensors.markAsRead();

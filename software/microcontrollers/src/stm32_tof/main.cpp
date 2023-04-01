@@ -1,8 +1,10 @@
 #include <Arduino.h>
+#include <PacketSerial.h>
 #include <VL53L1X.h>
 #include <Wire.h>
+#include <array>
 
-#include "config.h"
+#include "shared_config.h"
 #include "stm32_tof/include/config.h"
 
 // State
@@ -10,15 +12,20 @@ BoundsData bounds;
 BluetoothPayload bluetoothInboundPayload;
 
 // Serial managers
-SerialManager TeensySerial = SerialManager(
-    TEENSY_SERIAL, TEENSY_TOF_BAUD_RATE, TOF_RX_PACKET_SIZE,
-    TOF_RX_SYNC_START_BYTE, TOF_RX_SYNC_END_BYTE, TOF_TX_PACKET_SIZE,
-    TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE);
+PacketSerial teensySerial;
 
 // Time-Of-Flight sensors
-VL53L1X tofs[TOF_COUNT];
+std::array<VL53L1X, TOF_COUNT> tofs;
 
 // ------------------------------ MAIN CODE START ------------------------------
+void onTeensyPacket(const byte *buf, size_t size) {
+    TOFRXPayload payload;
+    memcpy(&payload, buf, sizeof(payload));
+
+    // Send bluetooth outbound payload to HC05
+    // TODO: Send data from tofRxPayload.bluetoothOutboundPayload
+}
+
 void setup() {
     // Turn on the debug LED
     pinMode(PIN_LED_DEBUG, OUTPUT);
@@ -33,13 +40,15 @@ void setup() {
     Wire.setSCL(PIN_SCL_TOF);
 
     // Initialise serial
-    TeensySerial.setup(true);
+    TEENSY_SERIAL.begin(TEENSY_TOF_BAUD_RATE);
     BLUETOOTH_SERIAL.begin(BLUETOOTH_BAUD_RATE);
     while (!BLUETOOTH_SERIAL) delay(10);
 #ifdef DEBUG
     DEBUG_SERIAL.begin(DEBUG_BAUD_RATE);
     while (!DEBUG_SERIAL) delay(10);
 #endif
+    teensySerial.setStream(&TEENSY_SERIAL);
+    teensySerial.setPacketHandler(&onTeensyPacket);
 
     // Initialise I2C
     Wire.begin();
@@ -82,31 +91,23 @@ void loop() {
     // Read TOF ranges
     for (uint8_t i = 0; i < TOF_COUNT; i++) {
         tofs[i].read();
-        if (tofs[i].ranging_data.range_status == VL53L1X::RangeValid) {
+        if (tofs[i].ranging_data.range_status == VL53L1X::RangeValid)
             bounds.set(i, tofs[i].ranging_data.range_mm);
-            bounds.newData = true;
-        } else if (tofs[i].ranging_data.range_status == VL53L1X::None) {
-            bounds.newData = false;
-        }
+        else if (tofs[i].ranging_data.range_status == VL53L1X::None)
+            bounds.set(i);
     }
 
     // Read bluetooth inbound payload from HC05
     // TODO: Read data into &bluetoothInboundPayload
 
     // Send data over serial to Teensy
-    uint8_t buf[sizeof(TOFTXPayload)];
+    byte buf[sizeof(TOFTXPayload)];
     memcpy(buf, &bounds, sizeof(bounds));
     memcpy(buf + sizeof(bounds), &bluetoothInboundPayload,
            sizeof(bluetoothInboundPayload));
-    TeensySerial.sendPacket(buf);
-    bounds.newData = false;
+    teensySerial.send(buf, sizeof(buf));
 
-    // Read bluetooth outbound payload from Teensy
-    TOFRXPayload tofRXPayload;
-    if (TeensySerial.readPacket(&tofRXPayload)) {
-        // Send bluetooth outbound payload to HC05
-        // TODO: Send data from tofRxPayload.bluetoothOutboundPayload
-    }
+    bounds.markAsOld();
 
     // ------------------------------ START DEBUG ------------------------------
 

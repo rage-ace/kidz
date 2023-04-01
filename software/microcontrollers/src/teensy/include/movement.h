@@ -11,6 +11,7 @@ class Movement {
     Movement();
 
     // Movement parameters
+    bool stop = false;
     float angle = 0;      // -179.99º to +180.00º
     int16_t velocity = 0; // ±35 to ±256
     float heading = 0;    // -179.99º to +180.00º

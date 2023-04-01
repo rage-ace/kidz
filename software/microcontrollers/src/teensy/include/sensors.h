@@ -1,19 +1,25 @@
 #ifndef TEENSY_SENSORS_H
 #define TEENSY_SENSORS_H
 
+#include <PacketSerial.h>
 #include <cmath>
 #include <cstdint>
 
-#include "serial.h"
-
 class Sensors {
   public:
-    Sensors(SerialManager &muxSerial, SerialManager &imuSerial,
-            SerialManager &tofSerial, SerialManager &coralSerial)
-        : _muxSerial(muxSerial), _imuSerial(imuSerial), _tofSerial(tofSerial),
+    Sensors(PacketSerial &muxSerial, PacketSerial &tofSerial,
+            PacketSerial &imuSerial, PacketSerial &coralSerial)
+        : _muxSerial(muxSerial), _tofSerial(tofSerial), _imuSerial(imuSerial),
           _coralSerial(coralSerial){};
 
     void init();
+    void waitForSubprocessorInit();
+
+    void onMuxPacket(const byte *buffer, size_t size);
+    void onTofPacket(const byte *buffer, size_t size);
+    void onImuPacket(const byte *buffer, size_t size);
+    void onCoralPacket(const byte *buffer, size_t size);
+
     void read();
     void markAsRead();
 
@@ -23,7 +29,7 @@ class Sensors {
         bool newData = false;
         float angle = NAN; // -179.99º to 180.00º
 
-        bool exists() const { return !std::isnan(angle); }
+        bool established() const { return !std::isnan(angle); }
     } _robot;
     struct {
         bool newData = false;
@@ -31,22 +37,23 @@ class Sensors {
     } _otherRobot;
     struct {
         bool newData = false;
-        float angle = NAN; // -179.99º to 180.00º
-        float depth = NAN; // 0.00 (inside edge) to 1.00 (outside edge)
+        float angleBisector = NAN; // -179.99º to 180.00º
+        float depth = 0;           // 0.00 (inside edge) to 1.00 (outside edge)
 
-        bool exists() const { return !std::isnan(angle) && !std::isnan(depth); }
+        bool exists() const { return !std::isnan(angleBisector); }
     } _line;
     struct {
-        bool newData = false;
-        float front = NAN; // 0.0 to 400.0 cm
-        float back = NAN;  // 0.0 to 400.0 cm
-        float left = NAN;  // 0.0 to 400.0 cm
-        float right = NAN; // 0.0 to 400.0 cm
+        struct {
+            bool newData = false;
+            float value = NAN; // 0.0 to 400.0 cm
+
+            bool established() const { return !std::isnan(value); }
+        } front, back, left, right;
 
         // Bounds in all four directions are established
         bool established() const {
-            return !std::isnan(front) && !std::isnan(back) &&
-                   !std::isnan(left) && !std::isnan(right);
+            return !std::isnan(front.value) && !std::isnan(back.value) &&
+                   !std::isnan(left.value) && !std::isnan(right.value);
         }
     } _bounds;
     struct {
@@ -71,13 +78,21 @@ class Sensors {
 
   private:
     // Serial managers to receive packets
-    SerialManager &_muxSerial;
-    SerialManager &_imuSerial;
-    SerialManager &_tofSerial;
-    SerialManager &_coralSerial;
+    PacketSerial &_muxSerial;
+    PacketSerial &_tofSerial;
+    PacketSerial &_imuSerial;
+    PacketSerial &_coralSerial;
 
-    // Internal offsets
+    // Init flags
+    bool _muxInit = false;
+    bool _tofInit = false;
+    bool _imuInit = false;
+    bool _coralInit = false;
+
+    // Internal state
     int16_t _robotAngleOffset;
+    bool _wasOnLine = false;
+    float _lastLineAngleBisector = NAN;
 };
 
 #endif
