@@ -1,4 +1,7 @@
-#include <stdint.h>
+#ifndef TEENSY_COUNTER_H
+#define TEENSY_COUNTER_H
+
+#include <cstdint>
 
 class Counter {
   public:
@@ -12,7 +15,6 @@ class Counter {
     bool started = false;
     uint32_t _count;
     uint32_t _lastTime;
-    uint32_t _lastDcount = UINT32_MAX;
-    uint32_t _lastDmillis = UINT32_MAX;
-    uint32_t _lastDmicros = UINT32_MAX;
 };
+
+#endif

@@ -9,7 +9,13 @@
 #include "util.h"
 
 // State
-RobotAngle robotAngle;
+IMUData imuData;
+
+// Serial managers
+SerialManager TeensySerial = SerialManager(
+    TEENSY_SERIAL, TEENSY_IMU_BAUD_RATE, IMU_RX_PACKET_SIZE,
+    IMU_RX_SYNC_START_BYTE, IMU_RX_SYNC_END_BYTE, IMU_TX_PACKET_SIZE,
+    IMU_TX_SYNC_START_BYTE, IMU_TX_SYNC_END_BYTE);
 
 // IMU (Sensor ID, I2C Address, I2C Wire)
 Adafruit_BNO055 bno = Adafruit_BNO055(55, I2C_ADDRESS_BNO055, &Wire);
@@ -156,14 +162,14 @@ void setup() {
 
 void loop() {
     // Read IMU data
-    robotAngle.newData = true;
-    robotAngle.angle = readRobotAngle(); // probably blocking
+    imuData.newData = true;
+    imuData.robotAngle = readRobotAngle(); // probably blocking
 
     // Send the IMU data over serial to Teensy
     uint8_t buf[sizeof(IMUTXPayload)];
-    memcpy(buf, &robotAngle, sizeof(robotAngle));
+    memcpy(buf, &imuData, sizeof(imuData));
     TeensySerial.sendPacket(buf);
-    robotAngle.newData = false;
+    imuData.newData = false;
 
     // ------------------------------ START DEBUG ------------------------------
 

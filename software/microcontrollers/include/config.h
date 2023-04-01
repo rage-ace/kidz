@@ -1,7 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "angle.h"
 #include "serial.h"
@@ -14,41 +14,24 @@
 #define NO_BALL_INT16  INT16_MAX
 #define NO_BALL_UINT16 UINT16_MAX
 
+// Raw sensor data transmitted over serial
 struct _RenewableData {
     bool newData = true;
 };
-
-struct Line : _RenewableData {
+struct LineData : _RenewableData {
     int16_t angle = NO_LINE_INT16; // -179(.)99° to 180(.)00°
     uint8_t size = NO_LINE_UINT8;  // 0(.)00 to 1(.)00
 
     bool exists() { return angle != NO_LINE_INT16 && size != NO_LINE_UINT8; }
 };
-
-struct RobotAngle : _RenewableData {
-    int16_t angle = NO_ANGLE; // -179(.)99º to +180(.)00º
-
-    bool exists() { return angle != NO_ANGLE; }
-
-    RobotAngle withOffset(int32_t offset) {
-        RobotAngle newAngle;
-        newAngle.newData = newData;
-        newAngle.angle = clipAngle(angle - offset);
-        return newAngle;
-    }
+struct IMUData : _RenewableData {
+    int16_t robotAngle = NO_ANGLE; // -179(.)99º to +180(.)00º
 };
-
-struct Bounds : _RenewableData {
+struct BoundsData : _RenewableData {
     uint16_t front = NO_BOUNDS; // 0(.)0 cm to 400(.)0 cm
     uint16_t back = NO_BOUNDS;  // 0(.)0 cm to 400(.)0 cm
     uint16_t left = NO_BOUNDS;  // 0(.)0 cm to 400(.)0 cm
     uint16_t right = NO_BOUNDS; // 0(.)0 cm to 400(.)0 cm
-
-    // Bounds in all four directions are established
-    bool established() {
-        return front != NO_BOUNDS && back != NO_BOUNDS && left != NO_BOUNDS &&
-               right != NO_BOUNDS;
-    }
 
     void set(uint8_t index, uint16_t value) {
         switch (index) {
@@ -67,16 +50,10 @@ struct Bounds : _RenewableData {
         }
     }
 };
-
-struct Ball : _RenewableData {
-    int16_t angle = NO_BALL_INT16; // -179(.)99° to 180(.)00°
-    uint16_t distance = NO_BALL_UINT16;
-
-    bool exists() {
-        return angle != NO_BALL_INT16 && distance != NO_BALL_UINT16;
-    }
+struct CameraData : _RenewableData {
+    int16_t ballAngle = NO_BALL_INT16;      // -179(.)99° to 180(.)00°
+    uint16_t ballDistance = NO_BALL_UINT16; // 0(.)0 cm to ~400(.)0 cm
 };
-
 struct BluetoothPayload : _RenewableData { // This should be symmetric
     // TODO
     byte testByte = 0x00;
@@ -90,20 +67,21 @@ struct BluetoothPayload : _RenewableData { // This should be symmetric
     }
 };
 
+// Serial packet payloads
 struct MUXTXPayload {
-    Line line;
+    LineData line;
 };
 struct MUXRXPayload {};
 
 struct IMUTXPayload {
-    RobotAngle robotAngle;
+    IMUData imu;
 };
 struct IMURXPayload {
     bool calibrating = false;
 };
 
 struct TOFTXPayload {
-    Bounds bounds;
+    BoundsData bounds;
     BluetoothPayload bluetoothInboundPayload;
 };
 struct TOFRXPayload {
@@ -111,7 +89,7 @@ struct TOFRXPayload {
 };
 
 struct CoralTXPayload {
-    Ball ball;
+    CameraData camera;
 };
 struct CoralRXPayload {};
 

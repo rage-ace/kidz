@@ -2,10 +2,17 @@
 
 #include "angle.h"
 #include "config.h"
+#include "serial.h"
 #include "stm32_mux/include/config.h"
 
 // State
-struct Line line;
+struct LineData line;
+
+// Serial managers
+SerialManager TeensySerial = SerialManager(
+    TEENSY_SERIAL, TEENSY_MUX_BAUD_RATE, MUX_RX_PACKET_SIZE,
+    MUX_RX_SYNC_START_BYTE, MUX_RX_SYNC_END_BYTE, MUX_TX_PACKET_SIZE,
+    MUX_TX_SYNC_START_BYTE, MUX_TX_SYNC_END_BYTE);
 
 // Sets an LDR MUX to select a specific channel.
 void selectLDRMUXChannel(LDRMUX mux, uint8_t channel) {

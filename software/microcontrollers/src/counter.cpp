@@ -11,18 +11,16 @@ bool Counter::countElapsed(const uint32_t dcount) {
     // If the counter has not started, reset the values
     if (!started) {
         started = true;
-        _lastDcount = dcount;
+        _count = 0;
         return false;
     }
 
     // Check if the interval has passed and return accordingly
-    if (dcount != UINT32_MAX) {
-        if (_count++ >= dcount) {
-            _count = 0;
-            return true;
-        } else
-            return false;
-    }
+    if (_count++ >= dcount) {
+        _count = 0;
+        return true;
+    } else
+        return false;
 
     // If no interval was specified, return true
     return true;
@@ -33,18 +31,16 @@ bool Counter::millisElapsed(const uint32_t dmillis) {
     // If the counter has not started, reset the values
     if (!started) {
         started = true;
-        _lastDmillis = dmillis;
+        _lastTime = 0;
         return false;
     }
 
     // Check if the interval has passed and return accordingly
-    if (dmillis != UINT32_MAX) {
-        if (millis() - _lastTime >= dmillis) {
-            _lastTime = millis();
-            return true;
-        } else
-            return false;
-    }
+    if (millis() - _lastTime >= dmillis) {
+        _lastTime = millis();
+        return true;
+    } else
+        return false;
 
     // If no interval was specified, return true
     return true;
@@ -55,18 +51,16 @@ bool Counter::microsElapsed(const uint32_t dmicros) {
     // If the counter has not started, reset the values
     if (!started) {
         started = true;
-        _lastDmicros = dmicros;
+        _lastTime = 0;
         return false;
     }
 
     // Check if the interval has passed and return accordingly
-    if (dmicros != UINT32_MAX) {
-        if (micros() - _lastTime >= dmicros) {
-            _lastTime = micros();
-            return true;
-        } else
-            return false;
-    }
+    if (micros() - _lastTime >= dmicros) {
+        _lastTime = micros();
+        return true;
+    } else
+        return false;
 
     // If no interval was specified, return true
     return true;

@@ -6,10 +6,16 @@
 #include "stm32_tof/include/config.h"
 
 // State
-Bounds bounds;
+BoundsData bounds;
 BluetoothPayload bluetoothInboundPayload;
 
-// Time-Of-Flight Sensors
+// Serial managers
+SerialManager TeensySerial = SerialManager(
+    TEENSY_SERIAL, TEENSY_TOF_BAUD_RATE, TOF_RX_PACKET_SIZE,
+    TOF_RX_SYNC_START_BYTE, TOF_RX_SYNC_END_BYTE, TOF_TX_PACKET_SIZE,
+    TOF_TX_SYNC_START_BYTE, TOF_TX_SYNC_END_BYTE);
+
+// Time-Of-Flight sensors
 VL53L1X tofs[TOF_COUNT];
 
 // ------------------------------ MAIN CODE START ------------------------------

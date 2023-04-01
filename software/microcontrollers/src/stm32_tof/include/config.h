@@ -39,24 +39,18 @@
 
 // Tell the compiler the specific pins each HardwareSerial uses
 #ifdef DEBUG
-    #define PIN_SERIAL1_RX PB7
-    #define PIN_SERIAL1_TX PB6
+    #define PIN_DEBUG_SERIAL_RX PB7
+    #define PIN_DEBUG_SERIAL_TX PB6
+    #define DEBUG_SERIAL        Serial1
 #endif
 
-#define PIN_SERIAL2_RX PA3
-#define PIN_SERIAL2_TX PA2
+#define PIN_TEENSY_SERIAL_RX PA3
+#define PIN_TEENSY_SERIAL_TX PA2
+#define TEENSY_SERIAL        Serial2
 
-#define PIN_SERIAL3_RX PB11
-#define PIN_SERIAL3_TX PB10
-
-// Serial Ports
-SerialManager TeensySerial = SerialManager(
-    Serial2, TEENSY_TOF_BAUD_RATE, TOF_RX_PACKET_SIZE, TOF_RX_SYNC_START_BYTE,
-    TOF_RX_SYNC_END_BYTE, TOF_TX_PACKET_SIZE, TOF_TX_SYNC_START_BYTE,
-    TOF_TX_SYNC_END_BYTE);
-#define BLUETOOTH_SERIAL Serial3
-#define DEBUG_SERIAL     Serial1
-#define TEENSY_SERIAL    Serial2
+#define PIN_BLUETOOTH_SERIAL_RX PB11
+#define PIN_BLUETOOTH_SERIAL_TX PB10
+#define BLUETOOTH_SERIAL        Serial3
 
 // EEPROM Addresses
 
