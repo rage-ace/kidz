@@ -63,8 +63,12 @@ struct BoundsData {
     }
 };
 struct CameraData : _RenewableData {
-    int16_t ballAngle = NO_BALL_INT16;      // -179(.)99° to 180(.)00°
-    uint16_t ballDistance = NO_BALL_UINT16; // 0(.)0 cm to ~400(.)0 cm
+    int16_t ballAngle = NO_BALL_INT16;            // -179(.)99° to 180(.)00°
+    uint16_t ballDistance = NO_BALL_UINT16;       // 0(.)0 cm to ~400(.)0 cm
+    int16_t blueGoalAngle = NO_BALL_INT16;        // -179(.)99° to 180(.)00°
+    uint16_t blueGoalDistance = NO_BALL_UINT16;   // 0(.)0 cm to ~400(.)0 cm
+    int16_t yellowGoalAngle = NO_BALL_INT16;      // -179(.)99° to 180(.)00°
+    uint16_t yellowGoalDistance = NO_BALL_UINT16; // 0(.)0 cm to ~400(.)0 cm
 };
 struct BluetoothPayload : _RenewableData { // This should be symmetric
     // TODO
