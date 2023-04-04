@@ -34,3 +34,32 @@ Find out more at [notes.skytect.one/robocup](https://notes.skytect.one/robocup)!
 ├── LICENSE
 └── README.md
 ```
+
+## Coral
+
+### Execution
+
+```bash
+cd software/coral
+python3 run_server.py
+```
+
+### Saving Dependencies
+
+```bash
+pip3 install pipreqs
+cd software/coral
+pipreqs .
+```
+
+## Microcontrollers
+
+### Execution
+
+```bash
+cd software/microcontrollers
+# Upload and run to Teensy
+pio run -e teensy -t upload -t monitor
+# Upload to Layer 1 STM32
+pio run -e stm32_mux -t upload
+```

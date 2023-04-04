@@ -1,0 +1,201 @@
+<html data-theme="winter">
+
+<head>
+    <title>kidz coral</title>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.3/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com?plugins=typography,aspect-ratio"></script>
+</head>
+
+<body>
+    <div class="w-full sm:h-screen p-8 flex flex-col sm:flex-row items-center">
+        <!-- Camera Feed -->
+        <section class="sm:w-2/5 p-8 flex flex-col gap-8 items-center">
+            <img class="w-[50vh] rounded-full shadow-lg" id="mainfeed" alt="Main Camera Feed">
+            <div class="flex flex-row gap-8">
+                {% for subfeed_id, subfeed_props in subfeeds.items() %}
+                <div class="w-1/2 flex flex-col items-center">
+                    <div class="dropdown dropdown-right dropdown-hover mb-4">
+                        <label tabindex="0" class="btn m-1" id="{{ subfeed_id }}-label">{{ subfeed_props.value
+                            }}</label>
+                        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+                            {% for option in subfeed_props.options %}
+                            <li><a onclick="updateDropdown('{{ subfeed_id }}', '{{ option }}')">{{ option }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <img class="w-full rounded-full shadow-lg" id="{{ subfeed_id }}" alt="Sub Camera Feed">
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Calibration Section -->
+        <section class="sm:w-3/5 sm:h-full p-8 overflow-y-auto">
+            <div class="flex justify-center">
+                <h1 class="text-2xl font-medium mb-4">Calibration</h1>
+            </div>
+            <div class="flex flex-col gap-8">
+                <!-- Slider Section -->
+                <section class="w-full">
+                    <div class="flex flex-col gap-4">
+                        {% for slider_id, slider_props in sliders.items() %}
+                        {% if slider_props.type == "SingleSlider" %}
+                        <div>
+                            <label class="text-md font-medium mb-4">{{ slider_props.label }}</label>
+                            <div class="flex flex-row items-center gap-4">
+                                <input type="range" class="range" id="{{ slider_id }}" min="{{ slider_props.min }}"
+                                    max="{{ slider_props.max }}" step="{{ slider_props.step }}"
+                                    value="{{ slider_props.value }}" />
+                                <input type="text" class="w-16 input text-center bg-gray-100 range-text"
+                                    value="{{ slider_props.value }}" />
+                            </div>
+                        </div>
+                        {% elif slider_props.type == "XYSlider" %}
+                        <div>
+                            <label class="text-md font-medium mb-4">{{ slider_props.label }}</label>
+                            <div class="flex flex-row gap-8">
+                                <div class="grow">
+                                    <div class="flex flex-row items-center gap-4">
+                                        <span class="text-lg font-bold">X</span>
+                                        <input type="range" class="range" id="{{ slider_id }}-x"
+                                            min="{{ slider_props.min[0] }}" max="{{ slider_props.max[0] }}"
+                                            step="{{ slider_props.step[0] }}" value="{{ slider_props.value[0] }}" />
+                                        <input type="text" class="w-16 input text-center bg-gray-100 range-text"
+                                            value="{{ slider_props.value[0] }}" />
+                                    </div>
+                                </div>
+                                <div class="grow">
+                                    <div class="flex flex-row items-center gap-4">
+                                        <span class="text-lg font-bold">Y</span>
+                                        <input type="range" class="range" id="{{ slider_id }}-y"
+                                            min="{{ slider_props.min[1] }}" max="{{ slider_props.max[1] }}"
+                                            step="{{ slider_props.step[1] }}" value="{{ slider_props.value[1] }}" />
+                                        <input type="text" class="w-16 input text-center bg-gray-100 range-text"
+                                            value="{{ slider_props.value[1] }}" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% elif slider_props.type == "HSVSlider" %}
+                        <div>
+                            <label class="text-md font-medium mb-4">{{ slider_props.label }}</label>
+                            <div class="flex flex-row gap-8">
+                                <div class="grow">
+                                    <div class="flex flex-row items-center gap-4">
+                                        <span class="text-lg font-bold">H</span>
+                                        <input type="range" class="range" id="{{ slider_id }}-h" min="0" max="255"
+                                            step="1" value="{{ slider_props.value[0] }}" />
+                                        <input type="text" class="w-16 input text-center bg-gray-100 range-text"
+                                            value="{{ slider_props.value[0] }}" />
+                                    </div>
+                                </div>
+                                <div class="grow">
+                                    <div class="flex flex-row items-center gap-4">
+                                        <span class="text-lg font-bold">S</span>
+                                        <input type="range" class="range" id="{{ slider_id }}-s" min="0" max="255"
+                                            step="1" value="{{ slider_props.value[1] }}" />
+                                        <input type="text" class="w-16 input text-center bg-gray-100 range-text"
+                                            value="{{ slider_props.value[1] }}" />
+                                    </div>
+                                </div>
+                                <div class="grow">
+                                    <div class="flex flex-row items-center gap-4">
+                                        <span class="text-lg font-bold">V</span>
+                                        <input type="range" class="range" id="{{ slider_id }}-v" min="0" max="255"
+                                            step="1" value="{{ slider_props.value[2] }}" />
+                                        <input type="text" class="w-16 input text-center bg-gray-100 range-text"
+                                            value="{{ slider_props.value[2] }}" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <!-- Recorded Values Section -->
+                <section class="w-full">
+                    <h2 class="text-lg font-medium mb-4">Recorded Values</h2>
+                    <div class="w-full p-4 bg-gray-100 rounded-lg">
+                        <pre class="text-sm font-medium" id="output-text">Output</pre>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </div>
+</body>
+<script>
+    // Update sliders and their text fields
+    const sliders = document.querySelectorAll('.range');
+    const sliderTexts = document.querySelectorAll('.range-text');
+    sliders.forEach((slider, i) => {
+        slider.addEventListener('input', () => {
+            // Limit value
+            const value = parseInt(slider.value);
+            if (value < parseInt(slider.min)) {
+                slider.value = slider.min;
+            } else if (value > parseInt(slider.max)) {
+                slider.value = slider.max;
+            }
+
+            // Update associated text field
+            sliderTexts[i].value = slider.value;
+
+            // Notify server
+            fetch('/updateslider', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: slider.id, value: parseInt(slider.value) })
+            });
+        });
+    });
+    sliderTexts.forEach((text, i) => {
+        text.addEventListener('input', () => {
+            // Limit value
+            const value = parseInt(text.value);
+            if (isNaN(value)) {
+                text.value = sliders[i].value; // the last value
+            }
+
+            // Update associated slider
+            sliders[i].value = text.value;
+
+            // Notify server
+            fetch('/updateslider', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: sliders[i].id, value: parseInt(sliders[i].value) })
+            });
+        });
+    });
+
+    // Update subfeed dropdowns
+    const updateDropdown = (subfeedId, newValue) => {
+        document.getElementById(`${subfeedId}-label`).textContent = newValue;
+
+        // Notify server
+        fetch('/updatesubfeed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: subfeedId, value: newValue })
+        });
+    }
+
+    // Listen to camera feeds
+    const socket = new WebSocket("{{ feed_url }}");
+    socket.onmessage = function (event) {
+        const payload = JSON.parse(event.data);
+        document.getElementById("mainfeed").src = "data:image/jpeg;base64," + payload.mainfeed;
+        document.getElementById("output-text").textContent = payload.output;
+        for (let i = 0; i < parseInt("{{ subfeeds.__len__() }}"); ++i) {
+            document.getElementById(`subfeed-${i}`).src = "data:image/jpeg;base64," + payload[`subfeed${i}`];
+        }
+    };
+</script>
+
+</html>
