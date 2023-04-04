@@ -1,11 +1,12 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#define SIN45 0.70710678F
-#define COS45 0.70710678F
+#include "Wire.h"
 
-float angleDiff(float leftAngle, float rightAngle);
-float smallerAngleDiff(float leftAngle, float rightAngle);
-float angleMidpoint(float leftAngle, float rightAngle);
+void scanI2C(Stream &serial, TwoWire wire);
+
+void wipeEEPROM();
+
+uint32_t printLoopTime(uint16_t sampleCount = 50);
 
 #endif
