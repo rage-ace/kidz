@@ -47,20 +47,7 @@ Find out more at [notes.skytect.one/robocup](https://notes.skytect.one/robocup)!
 
 ## Coral
 
-### Execution
-
-```bash
-cd software/coral
-python3 run_server.py
-```
-
-### Saving Dependencies
-
-```bash
-pip3 install pipreqs
-cd software/coral
-pipreqs .
-```
+[Click Me!](software/coral)
 
 ## Microcontrollers
 

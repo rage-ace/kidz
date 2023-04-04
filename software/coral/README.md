@@ -10,7 +10,7 @@ pip3 install --user -r requirements.txt  # Install python dependencies
 # Add to crontab
 sudo crontab -e
 # Add the following line:
-# "@reboot ~/kidz/software/coral/enable_serial.sh"
+# "@reboot ~/kidz/software/coral/enable_serial.sh"  # TODO: THIS DOES NOT WORK
 crontab -e
 # Add the following line:
 # "@reboot /bin/sleep 1 && screen -dmS cam ~/kidz/software/coral/run_noserver.sh"
