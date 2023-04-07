@@ -1,6 +1,7 @@
 cobs==1.2.0
 fastapi==0.95.0
-numpy==1.16.2
+jinja2==3.1.2
+numpy==1.21.6
 opencv_contrib_python==4.7.0.72
 pyserial==3.5
-uvicorn==0.21.1
+uvicorn[standard]==0.21.1

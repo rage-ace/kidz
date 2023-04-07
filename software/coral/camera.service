@@ -1,0 +1,8 @@
+[Unit]
+Description=Camera service
+
+[Service]
+ExecStart=sh /home/mendel/kidz/software/coral/run_noserver.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -3,23 +3,20 @@
 ## Setup
 
 ```bash
-sudo nmtui  # Connect to a network to SSH over, and set hostname to "kidz.local"
-sudo nano /etc/hosts  # Also change your hostname here to "kidz.local"
-pip3 install --user -r requirements.txt  # Install python dependencies
-echo 1 > /sys/module/ov5645_camera_mipi_v2/parameters/ov5645_af # Use one-shot autofocus
+ # Connect to a network to SSH over, and set hostname to "kidz.local"
+sudo nmtui
+sudo nano /etc/hosts  # Also change your hostname here to "kidz"
+
+# Use one-shot autofocus
+echo 1 > /sys/module/ov5645_camera_mipi_v2/parameters/ov5645_af
+
+# Install python dependencies
+sudo python3 -m pip install -r requirements.txt  # We will be running the script with root
 
 # Set up service
 sudo apt install -y screen
 sudo cp camera.service /etc/systemd/system/
-sudo systemctl enable camera
-
-# Add to crontab
-sudo crontab -e
-# Add the following line:
-# "@reboot ~/kidz/software/coral/enable_serial.sh"  # TODO: THIS DOES NOT WORK
-crontab -e
-# Add the following line:
-# "@reboot /bin/sleep 1 && screen -dmS cam ~/kidz/software/coral/run_noserver.sh"
+sudo systemctl enable camera  # TODO: THIS DOES NOT WORK (https://stackoverflow.com/questions/75961521/pyserial-write-raises-errno-5-input-output-error-a-while-after-startup-when)
 ```
 
 ## Execution
@@ -36,6 +33,11 @@ crontab -e
 ## Development
 
 ```bash
+# Install dependenceis
+sudo apt install -y python3-dev
+python3 -m pip install --user black pipreqs
+echo 'export PATH="/home/mendel/.local/bin:$PATH"' >> ~/.bashrc
+
 pipreqs . --force  # Capture python dependencies to requirements.txt
 black .  # Reformat all code
 ```

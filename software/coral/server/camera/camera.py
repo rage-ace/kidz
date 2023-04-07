@@ -42,12 +42,12 @@ class MemoryManager:
         self.params = {
             "frame": {
                 "shape": (480, 640),
-                "center_offset": [-7, 22],
+                "center_offset": [-5, 15],
                 "crop_radius": 192,
             },
             "mask": {
                 "robot_radius": 18,
-                "mask_field": False,
+                "mask_field": 0,  # False
                 # # HCI Computer Lab
                 # "orange": [(5, 70, 220), (28, 255, 255)],
                 # "blue": [(100, 70, 200), (110, 255, 255)],
@@ -55,13 +55,12 @@ class MemoryManager:
                 # "green": [(70, 70, 110), (90, 255, 255)],
                 # Home (living room, curtains drawn, cool lights on)
                 "orange": [(0, 170, 160), (15, 255, 255)],
-                "blue": [(100, 120, 80), (120, 255, 255)],
-                "yellow": [(15, 150, 200), (30, 255, 255)],
+                "blue": [(98, 180, 70), (120, 255, 255)],
+                "yellow": [(15, 110, 110), (40, 255, 255)],
                 "green": [(45, 60, 80), (100, 255, 255)],
             },
             "contour_size": {
-                # "ball": (0, 230),
-                "ball": [0, math.inf],
+                "ball": [0, 230],
                 "goal": [100, math.inf],
             },
             "filter_endurance": {
@@ -78,7 +77,7 @@ class MemoryManager:
                 DebugView.ORANGE_MASK,
                 DebugView.BLUE_MASK,
             ],
-            "render": False,
+            "render": 0,  # False
         }
 
         # Frame fetched by FetchFrameProcess
@@ -605,6 +604,7 @@ class SendPayloadThread(threading.Thread):
             )
 
             self.mem.loop_trackers["send_payload"].stop_iteration()
+        self._serial.close()
 
 
 class AnnotateFrameThread(threading.Thread):

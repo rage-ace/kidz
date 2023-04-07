@@ -16,6 +16,11 @@ class TeensySerial:
     def __init__(self) -> None:
         self._serial = Serial(TEENSY_SERIAL_DEVICE, TEENSY_SERIAL_BAUD_RATE)
 
+    def close(self) -> None:
+        self._serial.flushInput()
+        self._serial.flushOutput()
+        self._serial.close()
+
     def write_packet(
         self,
         ball: Tuple[float, float],
@@ -76,9 +81,4 @@ class TeensySerial:
         buf += b"\x00"  # delimiter byte
 
         # Send packet
-        try:
-            self._serial.write(buf)
-        except (
-            Exception
-        ) as exc:  # sometimes it can't write when the coral is starting up
-            print("Failed to write to serial: ", exc)
+        self._serial.write(buf)

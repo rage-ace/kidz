@@ -64,7 +64,7 @@ def draw_mask(img: np.ndarray, mask: np.ndarray):
     """Annotate a mask directly on an image."""
 
     inv_mask = mask == 0
-    img[inv_mask] = img[inv_mask] * 0.3
+    img[inv_mask] = img[inv_mask] * 0.2
 
 
 def draw_cross(
