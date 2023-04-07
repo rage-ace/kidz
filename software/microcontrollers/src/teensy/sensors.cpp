@@ -175,6 +175,20 @@ void Sensors::onCoralPacket(const byte *buf, size_t size) {
     _ball.angle = (float)payload.camera.ballAngle / 100;
     _ball.distance = (float)payload.camera.ballDistance / 10;
 
+    // Update goal data
+    _goals.newData = payload.camera.newData;
+#if TARGET_BLUE_GOAL
+    _goals.offensive = {(float)payload.camera.blueGoalAngle / 100,
+                        (float)payload.camera.blueGoalDistance / 10};
+    _goals.defensive = {(float)payload.camera.yellowGoalAngle / 100,
+                        (float)payload.camera.yellowGoalDistance / 10};
+#else
+    _goals.offensive = {(float)payload.camera.yellowGoalAngle / 100,
+                        (float)payload.camera.yellowGoalDistance / 10};
+    _goals.defensive = {(float)payload.camera.blueGoalAngle / 100,
+                        (float)payload.camera.blueGoalDistance / 10};
+#endif
+
     // Consider the Coral to be initialised
     _coralInit = true;
 }

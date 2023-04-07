@@ -5,6 +5,19 @@
 #include <cmath>
 #include <cstdint>
 
+#include "vector.h"
+
+struct Goals {
+    bool newData = false;
+    Vector offensive, defensive;
+
+    bool exists() const {
+        return !std::isnan(offensive.angle) &&
+               !std::isnan(offensive.distance) &&
+               !std::isnan(defensive.angle) && !std::isnan(defensive.distance);
+    }
+};
+
 class Sensors {
   public:
     Sensors(PacketSerial &muxSerial, PacketSerial &tofSerial,
@@ -57,7 +70,7 @@ class Sensors {
         }
     } _bounds;
     struct {
-        bool newData;
+        bool newData = false;
         float angle = NAN;    // -179.99º to 180.00º
         float distance = NAN; // 0.0 to ~400.0 cm
 
@@ -65,6 +78,7 @@ class Sensors {
             return !std::isnan(angle) && !std::isnan(distance);
         }
     } _ball;
+    Goals _goals;
     bool _hasBall = false; // Assume the robot does not have the ball initially
 
   public:
@@ -74,6 +88,7 @@ class Sensors {
     const decltype(_line) &line = _line;
     const decltype(_bounds) &bounds = _bounds;
     const decltype(_ball) &ball = _ball;
+    const decltype(_goals) &goals = _goals;
     const decltype(_hasBall) &hasBall = _hasBall;
 
   private:

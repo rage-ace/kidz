@@ -5,6 +5,7 @@
 
 #include "angle.h"
 #include "teensy/include/config.h"
+#include "vector.h"
 
 Movement::Movement() {}
 
@@ -36,8 +37,47 @@ void Movement::init() {
     delay(3000);
 }
 
-void Movement::updateHeadingController(float angle) {
+void Movement::updateHeadingController(const float angle) {
     _angularVelocity = _headingController.advance(angle);
+    _actualHeading = angle;
+}
+
+void Movement::setMoveTo(const Point &destination, const float targetHeading,
+                         const Goals &goals) {
+    // We use an algorithm that allows us to minimise error propagated by goal
+    // distance and rely more on goal angle
+
+    // Compute reference vectors
+    const auto center = (goals.offensive + goals.defensive) / 2;
+    const auto centerToOffensiveGoal = goals.offensive - center;
+
+    // Compute destination vector with reference vectors
+    const auto realDestination = Vector::fromPoint(destination);
+    const auto scalingFactor =
+        centerToOffensiveGoal.distance / HALF_GOAL_SEPARATION;
+    const auto scaledDestination = realDestination * scalingFactor;
+    const auto relativeDestination = center + scaledDestination;
+
+    // Update move to state
+    if (_lastDestination == nullptr || *_lastDestination != destination) {
+        // A new move to routine just started
+        _lastDestination = new Point(destination);
+        _initialDistance = relativeDestination.distance;
+        _moveToController.reset();
+    }
+
+    // Pack it into instructions for our update function
+    angle = relativeDestination.angle;
+    if (relativeDestination.distance > MOVE_TO_PRECISION) {
+        // The destination hasn't been reached
+        velocity = _moveToController.advance(relativeDestination.distance);
+        heading = (targetHeading - _actualHeading) *
+                  fmin(relativeDestination.distance / _initialDistance, 1.0);
+    } else {
+        // The destination has basically been reached
+        velocity = 0;
+        heading = targetHeading;
+    }
 }
 
 // Writes the current movement data.
@@ -99,9 +139,21 @@ void Movement::update() {
         digitalWriteFast(PIN_KICKER, LOW);
         _kickerActivated = false;
     }
+
+    // Invalidate move to routine (it can be reactivated by calling setMoveTo)
+    if (!_moveToActive) {
+        delete _lastDestination;
+        _lastDestination = nullptr;
+    }
+    _moveToActive = false;
 }
 
 void Movement::kick() {
+    if (_kickerActivated || millis() - _kickTime < KICKER_COOLDOWN_DURATION)
+        // Don't kick if the solenoid is already activated or if the cooldown
+        // period is not over
+        return;
+
     digitalWriteFast(PIN_KICKER, HIGH);
     _kickTime = millis();
     _kickerActivated = true;

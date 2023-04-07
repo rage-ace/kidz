@@ -239,8 +239,9 @@ void loop() {
     if (sensors.robot.newData)
         movement.updateHeadingController(sensors.robot.angle);
 
-    // Move about the balls
-    if (sensors.ball.exists()) {
+    if (sensors.ball.exists() && !sensors.hasBall) {
+        // Move behind the ball if we can see it somewhere else on the field
+
         // We can't just move straight at the ball. We need to move behind
         // it in a curve. Here, we calculate the angle offset we need to
         // achieve this.
@@ -258,13 +259,33 @@ void loop() {
                  1.0);
         // Then, we pack it into instructions for our update function.
         movement.angle = sensors.ball.angle + angleOffset;
-        // movement.speed = hasBall ? 280 : 240;
         movement.velocity = 100;
+        movement.dribble = false;
+    } else if (sensors.hasBall) {
+        // Move to the goal if we have the ball
+
+        // We use a similar curve algorithm for tracking the goal, but with a
+        // constant multiplier instead of an exponential decay multiplier as we
+        // want the robot to take a big orbit path, such that it has mroe space
+        // to position itself before shooting.
+        const auto angleOffset =
+            constrain(sensors.goals.offensive.angle, -9000, 9000) *
+            GOAL_MOVEMENT_M;
+        // Then, we pack it into instructions for our update function.
+        movement.angle = sensors.goals.offensive.angle + angleOffset;
+        movement.velocity = 255;
+        movement.dribble = true;
+
+        // If we're close enough to the goal, shoot
+        if (sensors.goals.offensive.distance < 50) {
+            movement.dribble = false;
+            movement.kick(); // this function has a cooldown built in
+        }
     } else {
-        // If we don't see the ball, we don't move.
-        // TODO: Move to the center of the field
-        movement.angle = 0;
-        movement.velocity = 0;
+        // Return to center if we can't find the ball
+
+        movement.setMoveTo(NEUTRAL_SPOT_CENTER, 0, sensors.goals);
+        movement.dribble = false;
     }
 
     // Slow down near the wall
@@ -272,14 +293,16 @@ void loop() {
 
     // Avoid the lines
     if (sensors.line.newData && sensors.line.exists()) {
-        if (sensors.line.depth < 0.3) {
+        if (sensors.line.depth < LINE_AVOIDANCE_THRESHOLD) {
             // Stop inside the line to prevent jerking
             movement.stop = true;
             // TODO: Line track towards the ball
         } else {
             // Move away from the line
             movement.angle = sensors.line.angleBisector;
-            movement.velocity = sensors.line.depth * 255;
+            movement.velocity =
+                fmin(sensors.line.depth * LINE_AVOIDANCE_SPEED_MULTIPLIER,
+                     LINE_AVOIDANCE_MAX_SPEED);
         }
     }
 

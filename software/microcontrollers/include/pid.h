@@ -11,6 +11,7 @@ class PIDController {
 
     // Update controller
     float advance(const float input);
+    void reset();
 
     // Update parameters
     void updateLimits(const float min, const float max);

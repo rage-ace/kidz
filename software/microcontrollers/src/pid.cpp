@@ -49,6 +49,14 @@ float PIDController::advance(const float input) {
     return output;
 }
 
+void PIDController::reset() {
+    _integral = 0.0F;
+    _lastError = 0.0F;
+    _lastTime = 0;
+    _lastOutput = 0.0F;
+    _justStarted = true;
+}
+
 // Update limits.
 void PIDController::updateLimits(const float min, const float max) {
     _min = min;
