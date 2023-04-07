@@ -1,5 +1,6 @@
 #include "vector.h"
 
+#include <Arduino.h>
 #include <cmath>
 
 Vector::Vector(float angle, float distance)
@@ -10,8 +11,10 @@ Vector Vector::fromPoint(Point point) {
             sqrtf(point.x * point.x + point.y * point.y)};
 }
 
-Vector Vector::operator=(const Vector &other) const {
-    return {other.angle, other.distance};
+Vector &Vector::operator=(const Vector &other) {
+    this->angle = other.angle;
+    this->distance = other.distance;
+    return *this;
 }
 
 Vector Vector::operator+(const Vector &other) const {

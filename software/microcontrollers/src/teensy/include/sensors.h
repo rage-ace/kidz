@@ -12,7 +12,7 @@ struct Goals {
     bool newData = false;
     Vector offensive, defensive;
 
-    bool exists() const {
+    bool exist() const {
         return !std::isnan(offensive.angle) &&
                !std::isnan(offensive.distance) &&
                !std::isnan(defensive.angle) && !std::isnan(defensive.distance);

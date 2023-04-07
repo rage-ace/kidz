@@ -170,6 +170,19 @@ void performDebug() {
                           abs((int)(sensors.ball.distance * 100) % 100));
         else
             Serial.printf("Ball                     | ");
+        // if (sensors.goals.exist())
+        Serial.printf("Goal O %4d.%02dº %4d.%02d cm D %4d.%02dº %4d.%02d cm | ",
+                      (int)sensors.goals.offensive.angle,
+                      abs((int)(sensors.goals.offensive.angle * 100) % 100),
+                      (int)sensors.goals.offensive.distance,
+                      abs((int)(sensors.goals.offensive.distance * 100) % 100),
+                      (int)sensors.goals.defensive.angle,
+                      abs((int)(sensors.goals.defensive.angle * 100) % 100),
+                      (int)sensors.goals.defensive.distance,
+                      abs((int)(sensors.goals.defensive.distance * 100) % 100));
+        // else
+        //     Serial.printf(
+        //         "Goal                                             | ");
         Serial.printf("Has Ball: %d | ", sensors.hasBall);
         Serial.printf("Other Robot: 0x%02X | ", sensors.otherRobot.testByte);
         Serial.println();

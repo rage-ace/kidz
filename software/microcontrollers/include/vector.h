@@ -19,10 +19,10 @@ class Vector {
     Vector(float angle = NAN, float distance = NAN);
     static Vector fromPoint(Point point);
 
-    const float angle;
-    const float distance;
+    float angle;
+    float distance;
 
-    Vector operator=(const Vector &other) const;
+    Vector &operator=(const Vector &other);
     Vector operator+(const Vector &other) const;
     Vector operator-(const Vector &other) const;
     Vector operator*(const float other) const;
