@@ -6,6 +6,12 @@
 sudo nmtui  # Connect to a network to SSH over, and set hostname to "kidz.local"
 sudo nano /etc/hosts  # Also change your hostname here to "kidz.local"
 pip3 install --user -r requirements.txt  # Install python dependencies
+echo 1 > /sys/module/ov5645_camera_mipi_v2/parameters/ov5645_af # Use one-shot autofocus
+
+# Set up service
+sudo apt install -y screen
+sudo cp camera.service /etc/systemd/system/
+sudo systemctl enable camera
 
 # Add to crontab
 sudo crontab -e
@@ -26,8 +32,6 @@ crontab -e
 # Run the headless version
 ./run_noserver.sh
 ```
-
-
 
 ## Development
 

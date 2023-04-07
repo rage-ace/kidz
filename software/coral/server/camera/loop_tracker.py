@@ -27,10 +27,16 @@ class LoopTracker:
             self._fps_history.pop(0)
 
     def last_loop_time(self) -> float:
-        return self._loop_time_history[-1]
+        try:
+            return self._loop_time_history[-1]
+        except IndexError:
+            return -1
 
     def last_fps(self) -> float:
-        return self._fps_history[-1]
+        try:
+            return self._fps_history[-1]
+        except IndexError:
+            return -1
 
     def mean_loop_time(self) -> float:
         try:

@@ -468,7 +468,7 @@ class DetectBallThread(threading.Thread):
         # Apply kalman filter to cartesian ball position
         # Update the ball filter
         if ball:
-            ball_dx, ball_dy = ball  # TODO: Why not filter the polar coordinates?
+            ball_dx, ball_dy = polar_to_cartesian(*ball)
             _, (a, b), _ = ellipse
 
             # Update state of Kalman filter
@@ -649,6 +649,7 @@ class AnnotateFrameThread(threading.Thread):
             # Find ball position
             raw_ball = self.mem.debug_values["raw_ball"]
             ball = self.mem.ball
+            mean_ball_distance: float = -1
             if ball:
                 self._ball_distance_history.append(ball[1])
                 while len(self._ball_distance_history) > 100:
