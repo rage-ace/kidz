@@ -29,13 +29,12 @@ float bearingMidpoint(float leftAngle, float rightAngle) {
 
 // Angles are easier for the robot to understand...
 
-int16_t bearingToAngle(float bearing) {
-    const auto angle = roundf(bearing * 100);
-    return angle > 18000 ? angle - 36000 : angle;
+float bearingToAngle(float bearing) {
+    return bearing > 180 ? bearing - 360 : bearing;
 }
 
-// Ensures that the angle is between -179(.)99 and +180(.)00.
-int16_t clipAngle(int32_t dividend) {
-    const auto r = dividend % 36000;
-    return r <= -18000 ? r + 36000 : r > 18000 ? r - 36000 : r;
+// Ensures that the angle is between -179.99F and +180.00F.
+float clipAngle(float dividend) {
+    const auto r = fmod(dividend, 360);
+    return r <= -180 ? r + 360 : r > 180 ? r - 360 : r;
 }

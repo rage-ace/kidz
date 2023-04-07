@@ -82,7 +82,15 @@
 #define PIN_KICKER       23
 
 // Sensor Config
-#define LIGHTGATE_THRESHOLD 1200
+// To have switched sides of the line, the line angle must have jumped this much
+#define LINE_ANGLE_SWITCH_ANGLE 90.0F
+// for this number of times
+#define LINE_ANGLE_SWITCH_COUNT 2
+// when compared to this number of previous line angles
+#define LINE_ANGLE_HISTORY 2
+
+#define LIGHTGATE_THRESHOLD 700
+
 // true if blue is the offensive goal, false if yellow is the offensive goal
 #define TARGET_BLUE_GOAL false
 

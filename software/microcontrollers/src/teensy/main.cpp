@@ -185,6 +185,9 @@ void performDebug() {
 
     // // Line Track
     // TODO
+
+    // // Figure out lightgate threshold
+    // Serial.println(analogRead(PIN_LIGHTGATE));
 #endif
 }
 

@@ -1,10 +1,13 @@
 #include "sensors.h"
 
+#include <algorithm>
+
 #include "shared_config.h"
 #include "teensy/include/config.h"
 
 void Sensors::init() {
     analogReadResolution(12);
+    analogReadAveraging(16);
 
     // Initialise serial
     MUX_SERIAL.begin(TEENSY_MUX_BAUD_RATE);
@@ -54,6 +57,8 @@ void Sensors::waitForSubprocessorInit() {
 void Sensors::onMuxPacket(const byte *buf, size_t size) {
     // Load payload
     MUXTXPayload payload;
+    // Don't continue if the payload is invalid
+    if (size != sizeof(payload)) return;
     memcpy(&payload, buf, sizeof(payload));
 
     // Update new flag
@@ -67,40 +72,74 @@ void Sensors::onMuxPacket(const byte *buf, size_t size) {
 
     // Compute line depth
     if (payload.line.size != NO_LINE_UINT8) {
-        const auto lineSize = (float)payload.line.size / 100;
+        // The robot is on the line, proceed to compute line parameters
 
-        if (smallerBearingDiff(clipBearing(_line.angleBisector),
-                               clipBearing(_lastLineAngleBisector)) > 90) {
-            // There's a huge jump in the line angle bisector
-            if (_line.depth < 0.5) {
+        const auto lineSize = (float)payload.line.size / 100;
+        const auto lineAngleBisector = _line.angleBisector;
+
+        // This part records jumps in line angle bisectors by referencing the
+        // history by updating switchCount
+        const auto hasJump = [this](float lastAngleBisector) {
+            return smallerBearingDiff(clipBearing(_line.angleBisector),
+                                      clipBearing(lastAngleBisector)) >
+                   LINE_ANGLE_SWITCH_ANGLE;
+        };
+        if (!_lineAngleBisectorHistory.empty() &&
+            std::all_of(_lineAngleBisectorHistory.begin(),
+                        _lineAngleBisectorHistory.end(), hasJump)) {
+            // There's a huge jump in the line angle bisector while in the line
+            // so we have probbaly switched sides, increment the counter.
+            ++switchCount;
+        } else {
+            // Only add to the line angle history if we haven't switched sides
+            // as we want it to reflect the last line angle at the last side.
+            // This also filters out noise in the line angle history.
+            _lineAngleBisectorHistory.push_back(lineAngleBisector);
+            while (_lineAngleBisectorHistory.size() > LINE_ANGLE_HISTORY)
+                _lineAngleBisectorHistory.pop_front();
+        }
+
+        // Now, we can use switchCount to determine if the robot switched sides
+        if (switchCount >= LINE_ANGLE_SWITCH_COUNT) {
+            // The robot has probably switched sides
+            if (_isInside) {
                 // Robot moved from the inner half to the outer half of the line
                 _line.depth = 1 - lineSize / 2;
-                _line.angleBisector =
-                    bearingToAngle(clipBearing(_line.angleBisector + 180));
+                _line.angleBisector = clipAngle(_line.angleBisector + 180);
             } else {
                 // Robot moved from the outer half to the inner half of the line
                 _line.depth = lineSize / 2;
             }
-        } else if (_line.depth < 0.5) {
-            // The robot is on the inner half of the line
+            _isInside = !_isInside;
+
+            // Register the switch
+            switchCount = 0;
+            _lineAngleBisectorHistory.clear();
+            _lineAngleBisectorHistory.push_back(
+                (float)payload.line.angleBisector / 100);
+        } else if (_isInside) {
+            // The robot didn't switch sides, on the inner half of the line
             _line.depth = lineSize / 2;
         } else {
-            // The robot is on the outer half of the line
+            // The robot didn't switch sides, on the outer half of the line
             _line.depth = 1 - lineSize / 2;
-            _line.angleBisector =
-                bearingToAngle(clipBearing(_line.angleBisector + 180));
+            _line.angleBisector = clipAngle(_line.angleBisector + 180);
         }
-    } else if (_wasOnLine) {
-        // The robot just exited the line, snap the depth to 0 or 1
-        if (_line.depth < 0.5)
-            _line.depth = 0; // It exited on the inside of the line
-        else
-            _line.depth = 1; // It exited on the outside of the line
-    }
+    } else {
+        // The robot is not on the line
 
-    // Update history for next iteration
-    _wasOnLine = payload.line.size != NO_LINE_UINT8;
-    _lastLineAngleBisector = _line.angleBisector;
+        if (!_lineAngleBisectorHistory.empty()) {
+            // The robot just exited the line, snap the depth to 0 or 1
+            if (_isInside) {
+                _line.depth = 0; // It exited on the inside of the line
+            } else {
+                _line.depth = 1; // It exited on the outside of the line
+            }
+        }
+
+        // Reset the line angle bisector history
+        _lineAngleBisectorHistory.clear();
+    }
 
     // Consider the STM32 MUX to be initialised
     _muxInit = true;
@@ -109,6 +148,8 @@ void Sensors::onMuxPacket(const byte *buf, size_t size) {
 void Sensors::onTofPacket(const byte *buf, size_t size) {
     // Load payload
     TOFTXPayload payload;
+    // Don't continue if the payload is invalid
+    if (size != sizeof(payload)) return;
     memcpy(&payload, buf, sizeof(payload));
 
     // Update bounds data
@@ -144,6 +185,8 @@ void Sensors::onTofPacket(const byte *buf, size_t size) {
 void Sensors::onImuPacket(const byte *buf, size_t size) {
     // Load payload
     IMUTXPayload payload;
+    // Don't continue if the payload is invalid
+    if (size != sizeof(payload)) return;
     memcpy(&payload, buf, sizeof(payload));
 
     // If this is the first reading, record down the initial angle offset
@@ -168,6 +211,8 @@ void Sensors::onImuPacket(const byte *buf, size_t size) {
 void Sensors::onCoralPacket(const byte *buf, size_t size) {
     // Load payload
     CoralTXPayload payload;
+    // Don't continue if the payload is invalid
+    if (size != sizeof(payload)) return;
     memcpy(&payload, buf, sizeof(payload));
 
     // Update ball data

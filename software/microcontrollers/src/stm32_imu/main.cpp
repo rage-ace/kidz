@@ -20,7 +20,7 @@ PacketSerial teensySerial;
 Adafruit_BNO055 bno = Adafruit_BNO055(55, I2C_ADDRESS_BNO055, &Wire);
 
 // Reads the current robot angle from the IMU.
-int16_t readRobotAngle() {
+float readRobotAngle() {
     sensors_event_t eulerAngles;
     bno.getEvent(&eulerAngles, Adafruit_BNO055::VECTOR_EULER);
     return bearingToAngle(eulerAngles.orientation.x);
@@ -166,7 +166,7 @@ void setup() {
 void loop() {
     // Read IMU data
     imuData.newData = true;
-    imuData.robotAngle = readRobotAngle(); // probably blocking
+    imuData.robotAngle = roundf(readRobotAngle() * 100); // probably blocking
 
     // Send the IMU data over serial to Teensy
     byte buf[sizeof(IMUTXPayload)];

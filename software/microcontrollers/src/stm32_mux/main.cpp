@@ -96,7 +96,7 @@ void findLine() {
         bearingMidpoint(clusterStartAngle, clusterEndAngle);
 
     // Sets lineAngle as perpendicular to angle of the midpoint of cluster ends
-    line.angleBisector = bearingToAngle(clusterMidpoint);
+    line.angleBisector = roundf(bearingToAngle(clusterMidpoint) * 100);
     // Sets lineSize as the ratio of the cluster size to 180°
     line.size = roundf(
         (smallerBearingDiff(clusterStartAngle, clusterEndAngle) / 180.0F) *

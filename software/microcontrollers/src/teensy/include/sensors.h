@@ -4,6 +4,7 @@
 #include <PacketSerial.h>
 #include <cmath>
 #include <cstdint>
+#include <deque>
 
 #include "vector.h"
 
@@ -104,10 +105,14 @@ class Sensors {
     bool _imuInit = false;
     bool _coralInit = false;
 
-    // Internal state
+    // Internal state (robot angle)
     int16_t _robotAngleOffset;
-    bool _wasOnLine = false;
-    float _lastLineAngleBisector = NAN;
+
+    // Internal state (line)
+    bool _isInside = true;   // Which side of the line is the robot on?
+    uint8_t switchCount = 0; // Has the angle jumped consistently enough to
+                             // consider the robot to have "switched sides"?
+    std::deque<float> _lineAngleBisectorHistory; // Past angles for comparison
 };
 
 #endif

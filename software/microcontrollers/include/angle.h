@@ -11,7 +11,7 @@ float bearingDiff(float leftAngle, float rightAngle);
 float smallerBearingDiff(float leftAngle, float rightAngle);
 float bearingMidpoint(float leftAngle, float rightAngle);
 
-int16_t bearingToAngle(float bearing);
-int16_t clipAngle(int32_t dividend);
+float bearingToAngle(float bearing);
+float clipAngle(float dividend);
 
 #endif
