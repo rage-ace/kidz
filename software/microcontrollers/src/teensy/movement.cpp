@@ -16,6 +16,7 @@ void Movement::init() {
     // analogWriteFrequency(PIN_MOTOR_FR_PWM, 36621);
     // analogWriteFrequency(PIN_MOTOR_BL_PWM, 36621);
     // analogWriteFrequency(PIN_MOTOR_BR_PWM, 36621);
+    analogWriteResolution(10);
 
     // Initialise pins
     pinMode(PIN_MOTOR_FL_DIR, OUTPUT);
@@ -26,14 +27,21 @@ void Movement::init() {
     pinMode(PIN_MOTOR_FR_PWM, OUTPUT);
     pinMode(PIN_MOTOR_BL_PWM, OUTPUT);
     pinMode(PIN_MOTOR_BR_PWM, OUTPUT);
+
+    analogWriteFrequency(PIN_DRIBBLER_PWM, 1000);
+    pinMode(PIN_DRIBBLER_PWM, OUTPUT);
+
+    // Arm dribbler
+    analogWrite(PIN_DRIBBLER_PWM, 128);
+    delay(3000);
 }
 
 void Movement::updateHeadingController(float angle) {
     _angularVelocity = _headingController.advance(angle);
 }
 
-// Writes the current movement data to the motors.
-void Movement::drive() {
+// Writes the current movement data.
+void Movement::update() {
     if (stop) {
         // Stop the motors
         analogWrite(PIN_MOTOR_FL_PWM, 0);
@@ -81,4 +89,20 @@ void Movement::drive() {
     analogWrite(PIN_MOTOR_FR_PWM, constrainSpeed(FRSpeed));
     analogWrite(PIN_MOTOR_BL_PWM, constrainSpeed(BLSpeed));
     analogWrite(PIN_MOTOR_BR_PWM, constrainSpeed(BRSpeed));
+
+    // Set dribbler motor speed
+    analogWrite(PIN_DRIBBLER_PWM,
+                dribble ? DRIBBLER_SPEED : DRIBBLER_ARM_SPEED);
+
+    // Deactivate solenoid if duration has elapsed
+    if (_kickerActivated && millis() - _kickTime > KICKER_ACTIVATION_DURATION) {
+        digitalWriteFast(PIN_KICKER, LOW);
+        _kickerActivated = false;
+    }
+}
+
+void Movement::kick() {
+    digitalWriteFast(PIN_KICKER, HIGH);
+    _kickTime = millis();
+    _kickerActivated = true;
 }

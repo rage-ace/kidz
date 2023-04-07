@@ -84,8 +84,11 @@
 #define LIGHTGATE_THRESHOLD 1200
 
 // Movement Config
-#define DRIVE_STALL_SPEED (int16_t)35
-#define DRIVE_MAX_SPEED   (int16_t)150
+#define DRIVE_STALL_SPEED          (int16_t)35
+#define DRIVE_MAX_SPEED            (int16_t)150
+#define DRIBBLER_ARM_SPEED         (int16_t)130
+#define DRIBBLER_SPEED             (int16_t)150
+#define KICKER_ACTIVATION_DURATION 100 // in ms
 
 #define BALL_MOVEMENT_A 1e-3F
 #define BALL_MOVEMENT_B 16.0F
@@ -101,6 +104,6 @@
 #define KP_ROBOT_ANGLE     14e0F
 #define KI_ROBOT_ANGLE     0e-6F
 #define KD_ROBOT_ANGLE     90e4F
-#define MIN_DT_ROBOT_ANGLE 5000 // At least this value for kD to have effect
+#define MIN_DT_ROBOT_ANGLE 5000 // in µs, minimum value for kD to have effect
 
 #endif

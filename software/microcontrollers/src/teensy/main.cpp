@@ -48,7 +48,7 @@ void performCalibration() {
             else
                 movement.angle += 100;
         }
-        movement.drive();
+        movement.update();
     }
 #endif
 #ifdef CALIBRATE_MUX
@@ -102,7 +102,7 @@ void performCalibration() {
         }
 
         // Actuate outputs
-        movement.drive();
+        movement.update();
     }
 #endif
 }
@@ -256,7 +256,7 @@ void loop() {
             fmin(BALL_MOVEMENT_A *
                      pow(exp(1), BALL_MOVEMENT_B * sensors.ball.distance),
                  1.0);
-        // Then, we pack it into instructions for our drive function.
+        // Then, we pack it into instructions for our update function.
         movement.angle = sensors.ball.angle + angleOffset;
         // movement.speed = hasBall ? 280 : 240;
         movement.velocity = 100;
@@ -289,7 +289,7 @@ void loop() {
 #endif
 
     // Actuate outputs
-    movement.drive();
+    movement.update();
 
     // Write to bluetooth
     auto bluetoothOutboundPayload = BluetoothPayload::create(0x01);
