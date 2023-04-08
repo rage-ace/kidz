@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <wiring.h>
 
 // Bearings are easier to do math with...
 
@@ -38,3 +39,11 @@ float clipAngle(float dividend) {
     const auto r = fmod(dividend, 360);
     return r <= -180 ? r + 360 : r > 180 ? r - 360 : r;
 }
+
+// Keep everything in degrees...
+
+float sinfd(float x) { return sin(x * DEG_TO_RAD); }
+
+float cosfd(float x) { return cos(x * DEG_TO_RAD); }
+
+float atan2fd(float x, float y) { return clipAngle(atan2(x, y) * RAD_TO_DEG); }

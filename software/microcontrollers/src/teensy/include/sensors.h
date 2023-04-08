@@ -73,7 +73,7 @@ class Sensors {
     struct {
         bool newData = false;
         float angle = NAN;    // -179.99º to 180.00º
-        float distance = NAN; // 0.0 to ~400.0 cm
+        float distance = NAN; // 0.00 to ~400.00 cm
 
         bool exists() const {
             return !std::isnan(angle) && !std::isnan(distance);
@@ -106,7 +106,7 @@ class Sensors {
     bool _coralInit = false;
 
     // Internal state (robot angle)
-    int16_t _robotAngleOffset;
+    float _robotAngleOffset;
 
     // Internal state (line)
     bool _isInside = true;   // Which side of the line is the robot on?

@@ -14,4 +14,8 @@ float bearingMidpoint(float leftAngle, float rightAngle);
 float bearingToAngle(float bearing);
 float clipAngle(float dividend);
 
+float sinfd(float x);
+float cosfd(float x);
+float atan2fd(float x, float y);
+
 #endif

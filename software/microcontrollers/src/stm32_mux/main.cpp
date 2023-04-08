@@ -159,6 +159,8 @@ void printLDR() {
 // ------------------------------ MAIN CODE START ------------------------------
 void onTeensyPacket(const byte *buf, size_t size) {
     MUXRXPayload payload;
+    // Don't continue if the payload is invalid
+    if (size != sizeof(payload)) return;
     memcpy(&payload, buf, sizeof(payload));
 
     // If the STM32 is in calibration mode, print the thresholds

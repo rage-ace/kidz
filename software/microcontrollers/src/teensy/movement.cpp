@@ -12,12 +12,11 @@ Movement::Movement() {}
 void Movement::init() {
     // Values from https://www.pjrc.com/teensy/td_pulse.html
     // (based on F_CPU_ACTUAL = 600 MHz)
-    // analogWriteResolution(12); // TODO: Debug with Multimeter
-    // analogWriteFrequency(PIN_MOTOR_FL_PWM, 36621);
-    // analogWriteFrequency(PIN_MOTOR_FR_PWM, 36621);
-    // analogWriteFrequency(PIN_MOTOR_BL_PWM, 36621);
-    // analogWriteFrequency(PIN_MOTOR_BR_PWM, 36621);
     analogWriteResolution(10);
+    analogWriteFrequency(PIN_MOTOR_FL_PWM, 146484);
+    analogWriteFrequency(PIN_MOTOR_FR_PWM, 146484);
+    analogWriteFrequency(PIN_MOTOR_BL_PWM, 146484);
+    analogWriteFrequency(PIN_MOTOR_BR_PWM, 146484);
 
     // Initialise pins
     pinMode(PIN_MOTOR_FL_DIR, OUTPUT);
@@ -67,10 +66,13 @@ void Movement::setMoveTo(const Point &destination, const float targetHeading,
     }
 
     // Pack it into instructions for our update function
+    _moveToActive = true;
     angle = relativeDestination.angle;
     if (relativeDestination.distance > MOVE_TO_PRECISION) {
         // The destination hasn't been reached
-        velocity = _moveToController.advance(relativeDestination.distance);
+        // We square the error to make it decelerate linearly
+        const auto controllerError = -pow(relativeDestination.distance, 2);
+        velocity = _moveToController.advance(controllerError);
         heading = (targetHeading - _actualHeading) *
                   fmin(relativeDestination.distance / _initialDistance, 1.0);
     } else {
@@ -93,8 +95,8 @@ void Movement::update() {
     }
 
     // Convert polar to cartesian
-    const auto x = sinf(angle * M_PI / 180);
-    const auto y = cosf(angle * M_PI / 180);
+    const auto x = sinfd(angle);
+    const auto y = cosfd(angle);
 
     // Compute the speeds of the individual motors
     const auto transformSpeed = [this](float velocity_,

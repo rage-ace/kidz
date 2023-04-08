@@ -20,6 +20,8 @@ std::array<VL53L1X, TOF_COUNT> tofs;
 // ------------------------------ MAIN CODE START ------------------------------
 void onTeensyPacket(const byte *buf, size_t size) {
     TOFRXPayload payload;
+    // Don't continue if the payload is invalid
+    if (size != sizeof(payload)) return;
     memcpy(&payload, buf, sizeof(payload));
 
     // Send bluetooth outbound payload to HC05

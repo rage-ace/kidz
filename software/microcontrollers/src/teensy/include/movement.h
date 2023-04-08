@@ -15,7 +15,7 @@ class Movement {
     // Movement parameters
     bool stop = false;
     float angle = 0;      // -179.99º to +180.00º
-    int16_t velocity = 0; // ±35 to ±256
+    int16_t velocity = 0; // ±35 to ±1023
     float heading = 0;    // -179.99º to +180.00º
     bool dribble = false;
 
@@ -28,7 +28,7 @@ class Movement {
 
   private:
     // Movement parameters
-    int16_t _angularVelocity = 0; // ~±140 to ~±1024
+    int16_t _angularVelocity = 0; // ~±140 to ~±4092
 
     // Internal values
     bool _moveToActive = false;
@@ -41,14 +41,14 @@ class Movement {
 
     // Controllers
     PIDController _headingController =
-        PIDController(0,         // Target angle
-                      -256, 256, // Output limits
+        PIDController(0,           // Target angle
+                      -1023, 1023, // Output limits
                       KP_ROBOT_ANGLE, KI_ROBOT_ANGLE, KD_ROBOT_ANGLE, // Gains
                       MIN_DT_ROBOT_ANGLE                              // min dt
         );
     PIDController _moveToController =
-        PIDController(0,         // Target distance offset
-                      -256, 256, // Output limits
+        PIDController(0,           // Target distance offset
+                      -1023, 1023, // Output limits
                       KP_MOVE_TO, KI_MOVE_TO, KD_MOVE_TO, // Gains
                       MIN_DT_MOVE_TO                      // min dt
         );

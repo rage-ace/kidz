@@ -189,20 +189,19 @@ void Sensors::onImuPacket(const byte *buf, size_t size) {
     if (size != sizeof(payload)) return;
     memcpy(&payload, buf, sizeof(payload));
 
+    const auto robotAngle = (float)payload.imu.robotAngle / 100;
     // If this is the first reading, record down the initial angle offset
     if (!_imuInit)
         // We can assume the value has already stabilised as the Teensy can
         // be reset separately from the IMU, after the IMU has been on for a
         // while
-        _robotAngleOffset = payload.imu.robotAngle;
+        _robotAngleOffset = robotAngle;
 
     // Update new flag
     _robot.newData = payload.imu.newData;
 
     // Update robot angle
-    const auto adjustedAngle =
-        clipAngle((int32_t)payload.imu.robotAngle - _robotAngleOffset);
-    _robot.angle = (float)adjustedAngle / 100;
+    _robot.angle = clipAngle(robotAngle - _robotAngleOffset);
 
     // Consider the STM32 IMU to be initialised
     _imuInit = true;
@@ -217,21 +216,25 @@ void Sensors::onCoralPacket(const byte *buf, size_t size) {
 
     // Update ball data
     _ball.newData = payload.camera.newData;
-    _ball.angle = (float)payload.camera.ballAngle / 100;
-    _ball.distance = (float)payload.camera.ballDistance / 10;
+    _ball.angle = payload.camera.ballAngle != INT16_MAX
+                      ? (float)payload.camera.ballAngle / 100
+                      : NAN;
+    _ball.distance = payload.camera.ballDistance != UINT16_MAX
+                         ? (float)payload.camera.ballDistance / 100
+                         : NAN;
 
     // Update goal data
     _goals.newData = payload.camera.newData;
 #if TARGET_BLUE_GOAL
     _goals.offensive = {(float)payload.camera.blueGoalAngle / 100,
-                        (float)payload.camera.blueGoalDistance / 10};
+                        (float)payload.camera.blueGoalDistance / 100};
     _goals.defensive = {(float)payload.camera.yellowGoalAngle / 100,
-                        (float)payload.camera.yellowGoalDistance / 10};
+                        (float)payload.camera.yellowGoalDistance / 100};
 #else
     _goals.offensive = {(float)payload.camera.yellowGoalAngle / 100,
-                        (float)payload.camera.yellowGoalDistance / 10};
+                        (float)payload.camera.yellowGoalDistance / 100};
     _goals.defensive = {(float)payload.camera.blueGoalAngle / 100,
-                        (float)payload.camera.blueGoalDistance / 10};
+                        (float)payload.camera.blueGoalDistance / 100};
 #endif
 
     // Consider the Coral to be initialised

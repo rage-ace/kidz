@@ -89,43 +89,41 @@
 // when compared to this number of previous line angles
 #define LINE_ANGLE_HISTORY 2
 
-#define LIGHTGATE_THRESHOLD 700
+#define LIGHTGATE_THRESHOLD 650
 
 // true if blue is the offensive goal, false if yellow is the offensive goal
 #define TARGET_BLUE_GOAL false
 
 // Movement Config
-#define DRIVE_STALL_SPEED          (int16_t)35
-#define DRIVE_MAX_SPEED            (int16_t)150
-#define DRIBBLER_ARM_SPEED         (int16_t)130
-#define DRIBBLER_SPEED             (int16_t)150
+#define DRIVE_STALL_SPEED          (int16_t)20
+#define DRIVE_MAX_SPEED            (int16_t)1023
+#define DRIBBLER_ARM_SPEED         (int16_t)520
+#define DRIBBLER_SPEED             (int16_t)600
 #define KICKER_ACTIVATION_DURATION 100  // in ms
 #define KICKER_COOLDOWN_DURATION   1000 // in ms
-#define MOVE_TO_PRECISION          2.0F // in cm
+#define MOVE_TO_PRECISION          3.5F // in cm
 
 // Multiplier = A * e^(B * ballDistance)
-#define BALL_MOVEMENT_A 1e-3F
+#define BALL_MOVEMENT_A 1e-0F
 #define BALL_MOVEMENT_B 16.0F
 // Multiplier = M
 #define GOAL_MOVEMENT_M 0.5F
 
-#define LINE_AVOIDANCE_THRESHOLD        0.3F
-#define LINE_AVOIDANCE_SPEED_MULTIPLIER 150.0F
-#define LINE_AVOIDANCE_MAX_SPEED        200.0F
+#define LINE_AVOIDANCE_THRESHOLD        0.2F
+#define LINE_AVOIDANCE_SPEED_MULTIPLIER 2000.0F // TODO: tune
+#define LINE_AVOIDANCE_MAX_SPEED        1023.0F // TODO: tune
 
 // PID Constants
 // kU = 18e-2F
-#define KP_ROBOT_ANGLE     14e0F
-#define KI_ROBOT_ANGLE     0e-6F
-#define KD_ROBOT_ANGLE     90e4F
+#define KP_ROBOT_ANGLE     5.4e1F
+#define KI_ROBOT_ANGLE     0e-5F
+#define KD_ROBOT_ANGLE     4.6e6F
 #define MIN_DT_ROBOT_ANGLE 5000 // in µs, minimum value for kD to have effect
 
-// TODO: Tune this
-// kU =
-#define KP_MOVE_TO     5e0F
+#define KP_MOVE_TO     1.4e0F
 #define KI_MOVE_TO     0e0F
-#define KD_MOVE_TO     0e0F
-#define MIN_DT_MOVE_TO 5000 // in µs, minimum value for kD to have effect
+#define KD_MOVE_TO     6.5e4F
+#define MIN_DT_MOVE_TO 40000 // in µs, minimum value for kD to have effect
 
 // Field Parameters
 #define HALF_GOAL_SEPARATION 107.5F // in cm
