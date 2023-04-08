@@ -42,8 +42,8 @@ class MemoryManager:
         self.params = {
             "frame": {
                 "shape": (480, 640),
-                "center_offset": [1, 27],
-                "crop_radius": 192,
+                "center_offset": [0, 11],
+                "crop_radius": 195,
             },
             "mask": {
                 "robot_radius": 25,
@@ -55,7 +55,7 @@ class MemoryManager:
                 # "green": [(70, 70, 110), (90, 255, 255)],
                 # Home (living room, curtains drawn, cool lights on)
                 "orange": [(0, 170, 160), (13, 255, 255)],
-                "blue": [(98, 180, 70), (120, 255, 255)],
+                "blue": [(98, 160, 60), (120, 255, 255)],
                 "yellow": [(15, 110, 110), (40, 255, 255)],
                 "green": [(45, 60, 80), (100, 255, 255)],
             },
@@ -65,7 +65,7 @@ class MemoryManager:
             },
             "filter_endurance": {
                 "ball": 50,
-                "goal": 20,
+                "goal": 200,
             },
             "test": {
                 "a": 1,
@@ -457,7 +457,7 @@ class DetectBallThread(threading.Thread):
             ellipse = (x, y), (2, 2), 0
             break
 
-        # Find cartesian position of ball
+        # Find polar position of ball
         ball: Tuple[float, float] = None
         if ellipse:
             # Find ball_dx, ball_dy
@@ -467,28 +467,27 @@ class DetectBallThread(threading.Thread):
         else:
             self._ball_not_found_count += 1
 
-        # Apply kalman filter to cartesian ball position
+        # Apply kalman filter to cartesian ball position (polar didn't work well)
         # Update the ball filter
         if ball:
-            ball_dx, ball_dy = polar_to_cartesian(*ball)
+            dx, dy = polar_to_cartesian(*ball)
             _, (a, b), _ = ellipse
 
             # Update state of Kalman filter
-            z = np.array([[ball_dx], [ball_dy], [a * 2], [b * 2]], dtype=np.float)
+            z = np.array([[dx], [dy], [a * 2], [b * 2]], dtype=np.float)
             self._ball_filter.update(z)
         # Predict the ball position if it has been found recently
         filtered_ball: Tuple[float, float] = None
         if self._ball_not_found_count <= self.mem.params["filter_endurance"]["ball"]:
             state = self._ball_filter.predict()
             if state is not None:  # state might be None if it's the initial prediction
-                ball_dx, ball_dy = state[0][0], state[1][0]
+                dx, dy = state[0][0], state[1][0]
                 # Check that the state values make sense (they are wonky sometimes)
                 if (
-                    -mask.shape[1] / 2 <= ball_dx <= mask.shape[1] / 2
-                    and -mask.shape[0] / 2 <= ball_dy <= mask.shape[0] / 2
+                    -mask.shape[1] / 2 <= dx <= mask.shape[1] / 2
+                    and -mask.shape[0] / 2 <= dy <= mask.shape[0] / 2
                 ):
-                    filtered_ball = (ball_dx, ball_dy)
-
+                    filtered_ball = (dx, dy)
         # Convert to polar coordinates
         filtered_ball_polar = (
             cartesian_to_polar(*filtered_ball) if filtered_ball else None
@@ -505,6 +504,47 @@ class DetectGoalsThread(threading.Thread):
         super().__init__()
         self.mem = mem
         self.stop_event = stop_event
+
+        # Kalman filter
+        F = np.eye(6, dtype=np.float)
+        B = 0
+        H = np.array(
+            [
+                [1, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 1],
+            ],
+            dtype=np.float,
+        )
+        # Q represents process noise
+        # larger values reduce response time, smaller values reduce noise
+        Q = np.array(
+            [
+                [1e-3, 0, 0, 0, 0, 0],
+                [0, 1e-2, 0, 0, 0, 0],
+                [0, 0, 1e-2, 0, 0, 0],
+                [0, 0, 0, 1e-2, 0, 0],
+                [0, 0, 0, 0, 1e-2, 0],
+                [0, 0, 0, 0, 0, 1e-3],
+            ],
+            dtype=np.float,
+        )
+        # R represents measurement noise
+        # smaller values indicate greater measurement precision
+        R = np.array(
+            [
+                [1e-3, 0, 0, 0],
+                [0, 1e-3, 0, 0],
+                [0, 0, 1e-3, 0],
+                [0, 0, 0, 1e-3],
+            ],
+            dtype=np.float,
+        )
+        self._blue_goal_filter = KalmanFilter(F=F, B=B, H=H, Q=Q, R=R)
+        self._yellow_goal_filter = KalmanFilter(F=F, B=B, H=H, Q=Q, R=R)
+        self._blue_goal_not_found_count = math.inf
+        self._yellow_goal_not_found_count = math.inf
 
     def run(self) -> None:
         while not self.stop_event.is_set():
@@ -557,11 +597,77 @@ class DetectGoalsThread(threading.Thread):
         if blue_rect:
             (x, y), _, theta = blue_rect
             blue_goal = map_pixels_to_cm(blue_mask.shape, x, y)
+            self._blue_goal_not_found_count = 0
+        else:
+            self._blue_goal_not_found_count += 1
 
         yellow_goal: Tuple[float, float] = None
         if yellow_rect:
             (x, y), _, theta = yellow_rect
             yellow_goal = map_pixels_to_cm(yellow_mask.shape, x, y)
+            self._yellow_goal_not_found_count = 0
+        else:
+            self._yellow_goal_not_found_count += 1
+
+        # Apply kalman filter to cartesian ball position (polar didn't work well)
+        # Update the blue goal filter
+        if blue_goal:
+            dx, dy = polar_to_cartesian(*blue_goal)
+            _, (a, b), _ = blue_rect
+
+            # Update state of Kalman filter
+            z = np.array([[dx], [dy], [a], [b]], dtype=np.float)
+            self._blue_goal_filter.update(z)
+        # Predict the blue goal position if it has been found recently
+        filtered_blue_goal: Tuple[float, float] = None
+        if (
+            self._blue_goal_not_found_count
+            <= self.mem.params["filter_endurance"]["goal"]
+        ):
+            state = self._blue_goal_filter.predict()
+            if state is not None:  # state might be None if it's the initial prediction
+                dx, dy = state[0][0], state[1][0]
+                # Check that the state values make sense (they are wonky sometimes)
+                # the acceptable region is twice the mask size on purpose
+                if (
+                    -blue_mask.shape[1] <= dx <= blue_mask.shape[1]
+                    and -blue_mask.shape[0] <= dy <= blue_mask.shape[0]
+                ):
+                    filtered_blue_goal = (dx, dy)
+        # Convert to polar coordinates
+        filtered_blue_goal_polar = (
+            cartesian_to_polar(*filtered_blue_goal) if filtered_blue_goal else None
+        )
+
+        # Apply kalman filter to cartesian ball position (polar didn't work well)
+        # Update the yellow goal filter
+        if yellow_goal:
+            dx, dy = polar_to_cartesian(*yellow_goal)
+            _, (a, b), _ = yellow_rect
+
+            # Update state of Kalman filter
+            z = np.array([[dx], [dy], [a], [b]], dtype=np.float)
+            self._yellow_goal_filter.update(z)
+        # Predict the yellow goal position if it has been found recently
+        filtered_yellow_goal: Tuple[float, float] = None
+        if (
+            self._yellow_goal_not_found_count
+            <= self.mem.params["filter_endurance"]["goal"]
+        ):
+            state = self._yellow_goal_filter.predict()
+            if state is not None:  # state might be None if it's the initial prediction
+                dx, dy = state[0][0], state[1][0]
+                # Check that the state values make sense (they are wonky sometimes)
+                # the acceptable region is twice the mask size on purpose
+                if (
+                    -yellow_mask.shape[1] <= dx <= yellow_mask.shape[1]
+                    and -yellow_mask.shape[0] <= dy <= yellow_mask.shape[0]
+                ):
+                    filtered_yellow_goal = (dx, dy)
+        # Convert to polar coordinates
+        filtered_yellow_goal_polar = (
+            cartesian_to_polar(*filtered_yellow_goal) if filtered_yellow_goal else None
+        )
 
         # Set debug values
         self.mem.debug_values["raw_blue_goal"] = blue_goal
@@ -569,8 +675,7 @@ class DetectGoalsThread(threading.Thread):
         self.mem.debug_values["blue_rect"] = blue_rect
         self.mem.debug_values["yellow_rect"] = yellow_rect
 
-        # TODO: Apply kalman filter to goal values?
-        return blue_goal, yellow_goal
+        return filtered_blue_goal_polar, filtered_yellow_goal_polar
 
 
 class SendPayloadThread(threading.Thread):
@@ -699,11 +804,19 @@ class AnnotateFrameThread(threading.Thread):
                 text += f"Mean     :   None\n\n"
             # GOALS
             text += f"BLUE GOAL\n"
+            if self.mem.debug_values["raw_blue_goal"]:
+                text += f"Raw      : {self.mem.debug_values['raw_blue_goal'][0]:7.2f}º {self.mem.debug_values['raw_blue_goal'][1]:6.2f} cm away\n"
+            else:
+                text += f"Raw      :   None\n"
             if self.mem.blue_goal:
                 text += f"Filtered : {self.mem.blue_goal[0]:7.2f}º {self.mem.blue_goal[1]:6.2f} cm away\n"
             else:
                 text += f"Filtered :   None\n"
             text += f"YELLOW GOAL\n"
+            if self.mem.debug_values["raw_yellow_goal"]:
+                text += f"Raw      : {self.mem.debug_values['raw_yellow_goal'][0]:7.2f}º {self.mem.debug_values['raw_yellow_goal'][1]:6.2f} cm away\n"
+            else:
+                text += f"Raw      :   None\n"
             if self.mem.yellow_goal:
                 text += f"Filtered : {self.mem.yellow_goal[0]:7.2f}º {self.mem.yellow_goal[1]:6.2f} cm away\n"
             else:

@@ -26,8 +26,8 @@ app_state = AppState(
     sliders=[
         XYSlider(
             "center-offset",
-            (-30, -30),
-            (30, 30),
+            (-40, -40),
+            (40, 40),
             (1, 1),
             camera.mem.params["frame"]["center_offset"],
         ),

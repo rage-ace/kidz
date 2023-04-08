@@ -24,10 +24,10 @@ sudo systemctl enable camera  # TODO: THIS DOES NOT WORK (https://stackoverflow.
 ```bash
 # Run the version with a webserver debugger
 # Access it at http://kidz.local:8080
-./run_server.sh
+sudo sh run_server.sh
 
 # Run the headless version
-./run_noserver.sh
+sudo sh run_noserver.sh
 ```
 
 ## Development
