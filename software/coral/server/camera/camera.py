@@ -42,11 +42,11 @@ class MemoryManager:
         self.params = {
             "frame": {
                 "shape": (480, 640),
-                "center_offset": [1, 23],
+                "center_offset": [1, 27],
                 "crop_radius": 192,
             },
             "mask": {
-                "robot_radius": 20,
+                "robot_radius": 25,
                 "mask_field": 0,  # False
                 # # HCI Computer Lab
                 # "orange": [(5, 70, 220), (28, 255, 255)],
@@ -54,7 +54,7 @@ class MemoryManager:
                 # "yellow": [(25, 40, 230), (30, 200, 255)],
                 # "green": [(70, 70, 110), (90, 255, 255)],
                 # Home (living room, curtains drawn, cool lights on)
-                "orange": [(0, 170, 160), (15, 255, 255)],
+                "orange": [(0, 170, 160), (13, 255, 255)],
                 "blue": [(98, 180, 70), (120, 255, 255)],
                 "yellow": [(15, 110, 110), (40, 255, 255)],
                 "green": [(45, 60, 80), (100, 255, 255)],

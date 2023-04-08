@@ -35,7 +35,7 @@ class TeensySerial:
             else np.iinfo(np.int16).max  # Flag for no ball
         )
         ball_distance = (
-            round(ball[1] * 100)  # 0(.)00 cm to 400(.)00 cm
+            round(ball[1] * 100)  # from 0(.)00 cm
             if ball[1]
             else np.iinfo(np.uint16).max  # Flag for no ball
         )
@@ -45,7 +45,7 @@ class TeensySerial:
             else np.iinfo(np.int16).max  # Flag for no goal
         )
         blue_goal_distance = (
-            round(blue_goal[1] * 100)  # 0(.)00 cm to 400(.)00 cm
+            round(blue_goal[1] * 100)  # from 0(.)00 cm
             if blue_goal[1]
             else np.iinfo(np.uint16).max  # Flag for no goal
         )
@@ -55,14 +55,10 @@ class TeensySerial:
             else np.iinfo(np.int16).max  # Flag for no ball
         )
         yellow_goal_distance = (
-            round(yellow_goal[1] * 100)  # 0(.)00 cm to 400(.)00 cm
+            round(yellow_goal[1] * 100)  # from 0(.)00 cm
             if yellow_goal[1]
             else np.iinfo(np.uint16).max  # Flag for no ball
         )
-        # Clamp to max of 400(.)00 cm
-        ball_distance = min(ball_distance, 40000)
-        blue_goal_distance = min(blue_goal_distance, 40000)
-        yellow_goal_distance = min(yellow_goal_distance, 40000)
 
         # Pack data
         buf = struct.pack(
