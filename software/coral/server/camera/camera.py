@@ -42,11 +42,11 @@ class MemoryManager:
         self.params = {
             "frame": {
                 "shape": (480, 640),
-                "center_offset": [-5, 15],
+                "center_offset": [1, 23],
                 "crop_radius": 192,
             },
             "mask": {
-                "robot_radius": 18,
+                "robot_radius": 20,
                 "mask_field": 0,  # False
                 # # HCI Computer Lab
                 # "orange": [(5, 70, 220), (28, 255, 255)],
@@ -64,8 +64,8 @@ class MemoryManager:
                 "goal": [100, math.inf],
             },
             "filter_endurance": {
-                "ball": 100,
-                "goal": 100,
+                "ball": 50,
+                "goal": 20,
             },
             "test": {
                 "a": 1,
@@ -386,27 +386,30 @@ class DetectBallThread(threading.Thread):
             ],
             dtype=np.float,
         )
+        # Q represents process noise
+        # larger values reduce response time, smaller values reduce noise
         Q = np.array(
             [
-                [1e-2, 0, 0, 0, 0, 0],
+                [1e-3, 0, 0, 0, 0, 0],
                 [0, 1e-2, 0, 0, 0, 0],
-                [0, 0, 5.0, 0, 0, 0],
-                [0, 0, 0, 5.0, 0, 0],
+                [0, 0, 1e-2, 0, 0, 0],
+                [0, 0, 0, 1e-2, 0, 0],
                 [0, 0, 0, 0, 1e-2, 0],
-                [0, 0, 0, 0, 0, 1e-2],
+                [0, 0, 0, 0, 0, 1e-3],
             ],
             dtype=np.float,
         )
+        # R represents measurement noise
+        # smaller values indicate greater measurement precision
         R = np.array(
             [
-                [1e-1, 0, 0, 0],
-                [0, 1e-1, 0, 0],
-                [0, 0, 1e-1, 0],
-                [0, 0, 0, 1e-1],
+                [1e-3, 0, 0, 0],
+                [0, 1e-3, 0, 0],
+                [0, 0, 1e-3, 0],
+                [0, 0, 0, 1e-3],
             ],
             dtype=np.float,
         )
-        # TODO: What do these constants mean?
         self._ball_filter = KalmanFilter(F=F, B=B, H=H, Q=Q, R=R)
         self._ball_not_found_count = math.inf
 
@@ -693,7 +696,18 @@ class AnnotateFrameThread(threading.Thread):
             if mean_ball_distance:
                 text += f"Mean     :          {mean_ball_distance:6.2f} cm away\n"
             else:
-                text += f"Mean     :   None\n"
+                text += f"Mean     :   None\n\n"
+            # GOALS
+            text += f"BLUE GOAL\n"
+            if self.mem.blue_goal:
+                text += f"Filtered : {self.mem.blue_goal[0]:7.2f}º {self.mem.blue_goal[1]:6.2f} cm away\n"
+            else:
+                text += f"Filtered :   None\n"
+            text += f"YELLOW GOAL\n"
+            if self.mem.yellow_goal:
+                text += f"Filtered : {self.mem.yellow_goal[0]:7.2f}º {self.mem.yellow_goal[1]:6.2f} cm away\n"
+            else:
+                text += f"Filtered :   None\n"
 
             # Propagate results
             self.mem.debug_results = {

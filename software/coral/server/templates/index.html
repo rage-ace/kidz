@@ -39,6 +39,14 @@
                 <h1 class="text-2xl font-medium mb-4">Calibration</h1>
             </div>
             <div class="flex flex-col gap-8">
+                <!-- Recorded Values Section -->
+                <section class="w-full">
+                    <h2 class="text-lg font-medium mb-4">Recorded Values</h2>
+                    <div class="w-full p-4 bg-gray-100 rounded-lg">
+                        <pre class="text-sm font-medium" id="output-text">Output</pre>
+                    </div>
+                </section>
+
                 <!-- Slider Section -->
                 <section class="w-full">
                     <div class="flex flex-col gap-4">
@@ -115,14 +123,6 @@
                         </div>
                         {% endif %}
                         {% endfor %}
-                    </div>
-                </section>
-
-                <!-- Recorded Values Section -->
-                <section class="w-full">
-                    <h2 class="text-lg font-medium mb-4">Recorded Values</h2>
-                    <div class="w-full p-4 bg-gray-100 rounded-lg">
-                        <pre class="text-sm font-medium" id="output-text">Output</pre>
                     </div>
                 </section>
             </div>
