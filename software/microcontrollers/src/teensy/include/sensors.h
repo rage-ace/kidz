@@ -59,7 +59,7 @@ class Sensors {
     struct {
         struct {
             bool newData = false;
-            float value = NAN; // 0.0 to 400.0 cm
+            float value = NAN; // 0.0 to ~70.0 cm
 
             bool established() const { return !std::isnan(value); }
         } front, back, left, right;
@@ -73,7 +73,7 @@ class Sensors {
     struct {
         bool newData = false;
         float angle = NAN;    // -179.99º to 180.00º
-        float distance = NAN; // 0.00 to ~400.00 cm
+        float distance = NAN; // 0.00 to ~150.00 cm
 
         bool exists() const {
             return !std::isnan(angle) && !std::isnan(distance);

@@ -65,40 +65,80 @@ void performCalibration() {
         while (MUX_SERIAL.available() > 0) Serial.write(MUX_SERIAL.read());
     }
 #endif
-#ifdef CALIBRATE_ROBOT_ANGLE_CONTROLLER
-    auto circleCounter = Counter();
-    auto rotateCounter = Counter();
-    auto controller = PIDController(0,         // Target angle
-                                    -256, 256, // Output limits
-                                    KP_ROBOT_ANGLE, KI_ROBOT_ANGLE,
-                                    KD_ROBOT_ANGLE,    // Gains
-                                    MIN_DT_ROBOT_ANGLE // min dt
-    );
-    while (10) {
+#ifdef CALIBRATE_ROBOT_ANGLE
+    while (1) {
         // Read all sensor values
         sensors.read();
 
         // Keep straight
         if (sensors.robot.newData) {
-            movement.angularVelocity = controller.advance(sensors.robot.angle);
-
+            movement.updateHeadingController(sensors.robot.angle);
             // Print controller info
-            controller.debugPrint("Heading");
+            movement.headingController.debugPrint("Heading");
         }
 
-        // Spin in a circle
-        movement.speed = 80;
-        if (circleCounter.millisElapsed(4)) {
-            if (movement.angle == 18000)
-                movement.angle = -17000;
-            else
-                movement.angle += 100;
-        }
-        if (rotateCounter.millisElapsed(50)) {
-            if (controller.setpoint == 18000)
-                controller.setpoint = -17000;
-            else
-                controller.setpoint += 100;
+        // // Tune while stationary (rough tuning)
+        // movement.angle = 0;
+        // movement.heading = 0;
+        // // Tune while moving (fine tuning)
+        // movement.velocity = 300;
+        // movement.angle = fmod(millis() / 5, 360);
+        // Tune while moving and turning (finer tuning, reduce period for finer)
+        movement.velocity = 300;
+        movement.angle = fmod(millis() / 5, 360);
+        const auto heading = fmod(millis() / 10, 360);
+        movement.heading = heading > 180 ? heading - 360 : heading;
+
+        // Actuate outputs
+        movement.update();
+    }
+#endif
+#ifdef CALIBRATE_BALL_CURVE
+    while (1) {
+        // Read all sensor values
+        sensors.read();
+
+        // Keep straight
+        if (sensors.robot.newData)
+            movement.updateHeadingController(sensors.robot.angle);
+
+        if (sensors.ball.exists()) {
+            // Move behind the ball if we can see it somewhere else on the field
+            const auto multiplier = fmin(
+                powf(exp(1), BALL_MOVEMENT_DECAY * (BALL_MOVEMENT_MAX_CURVE -
+                                                    sensors.ball.distance)),
+                1.0);
+            const auto angleOffset =
+                constrain(sensors.ball.angle, -90, 90) * multiplier;
+            movement.heading =
+                constrain(sensors.ball.angle, -BALL_MOVEMENT_MAX_HEADING,
+                          BALL_MOVEMENT_MAX_HEADING);
+            movement.angle = sensors.ball.angle + angleOffset;
+            movement.setLinearDecelerate(
+                BALL_MOVEMENT_START_SPEED, BALL_MOVEMENT_END_SPEED,
+                sensors.ball.distance / BALL_MOVEMENT_START_DECELERATING);
+
+            // Print debug output
+            Serial.print("Ball Distance: ");
+            Serial.print(sensors.ball.distance);
+            Serial.print(" | Multiplier: ");
+            Serial.print(multiplier);
+            Serial.print(" | Angle : ");
+            Serial.print(sensors.ball.angle);
+            Serial.print(" | Angle Offset: ");
+            Serial.print(angleOffset);
+            Serial.print(" | Movement angle: ");
+            Serial.print(movement.angle);
+            Serial.print(" | Movement velocity: ");
+            Serial.print(movement.velocity);
+            Serial.println();
+
+        } else {
+            // Stop if we can't see the ball
+            movement.setStop();
+
+            // Print debug output
+            Serial.println("Ball not found");
         }
 
         // Actuate outputs
@@ -129,7 +169,7 @@ void performDebug() {
     // Test motors
     // movement.dribble = true;
     // movement.angle = 0;
-    // movement.velocity = 0;
+    // movement.velocity = 400;
     // movement.heading = 0;
     // movement.updateHeadingController(0);
     // movement.update();
@@ -160,24 +200,29 @@ void performDebug() {
             Serial.printf("Robot Angle          | ");
         // Serial.print("Bounds ");
         // if (sensors.bounds.front.established())
-        //     Serial.printf("F: %3d.%1d cm ", (int)sensors.bounds.front.value,
-        //                   abs((int)(sensors.bounds.front.value * 10) % 10));
+        //     Serial.printf("F: %3d.%1d cm ",
+        //     (int)sensors.bounds.front.value,
+        //                   abs((int)(sensors.bounds.front.value * 10)
+        //                   % 10));
         // else
         //     Serial.printf("F:          ");
-        // if (sensors.bounds.back.established())
-        //     Serial.printf("B: %3d.%1d cm ", (int)sensors.bounds.back.value,
-        //                   abs((int)(sensors.bounds.back.value * 10) % 10));
-        // else
-        //     Serial.printf("B:          ");
+        if (sensors.bounds.back.established())
+            Serial.printf("B: %3d.%1d cm ", (int)sensors.bounds.back.value,
+                          abs((int)(sensors.bounds.back.value * 10) % 10));
+        else
+            Serial.printf("B:          ");
         // if (sensors.bounds.left.established())
-        //     Serial.printf("L: %3d.%1d cm ", (int)sensors.bounds.left.value,
-        //                   abs((int)(sensors.bounds.left.value * 10) % 10));
+        //     Serial.printf("L: %3d.%1d cm ",
+        //     (int)sensors.bounds.left.value,
+        //                   abs((int)(sensors.bounds.left.value * 10) %
+        //                   10));
         // else
         //     Serial.printf("L:          ");
         // if (sensors.bounds.right.established())
         //     Serial.printf("R: %3d.%1d cm | ",
         //     (int)sensors.bounds.right.value,
-        //                   abs((int)(sensors.bounds.right.value * 10) % 10));
+        //                   abs((int)(sensors.bounds.right.value * 10)
+        //                   % 10));
         // else
         //     Serial.printf("R:          | ");
         if (sensors.ball.exists())
@@ -189,20 +234,23 @@ void performDebug() {
         else
             Serial.printf("Ball                     | ");
         Serial.printf("Has Ball: %d | ", sensors.hasBall);
-        if (sensors.goals.exist())
-            Serial.printf(
-                "Goal O %4d.%02dº %4d.%02d cm D %4d.%02dº %4d.%02d cm | ",
-                (int)sensors.goals.offensive.angle,
-                abs((int)(sensors.goals.offensive.angle * 100) % 100),
-                (int)sensors.goals.offensive.distance,
-                abs((int)(sensors.goals.offensive.distance * 100) % 100),
-                (int)sensors.goals.defensive.angle,
-                abs((int)(sensors.goals.defensive.angle * 100) % 100),
-                (int)sensors.goals.defensive.distance,
-                abs((int)(sensors.goals.defensive.distance * 100) % 100));
-        else
-            Serial.printf(
-                "Goal                                             | ");
+        // if (sensors.goals.exist())
+        //     Serial.printf(
+        //         "Goal O %4d.%02dº %4d.%02d cm D %4d.%02dº %4d.%02d cm
+        //         |
+        //         ", (int)sensors.goals.offensive.angle,
+        //         abs((int)(sensors.goals.offensive.angle * 100) %
+        //         100), (int)sensors.goals.offensive.distance,
+        //         abs((int)(sensors.goals.offensive.distance * 100) %
+        //         100), (int)sensors.goals.defensive.angle,
+        //         abs((int)(sensors.goals.defensive.angle * 100) %
+        //         100), (int)sensors.goals.defensive.distance,
+        //         abs((int)(sensors.goals.defensive.distance * 100) %
+        //         100));
+        // else
+        //     Serial.printf(
+        //         "Goal                                             |
+        //         ");
         Serial.printf("Other Robot: 0x%02X | ", sensors.otherRobot.testByte);
         Serial.printf("Drive %4d.%02dº at %4d.%02d | ", (int)movement.angle,
                       abs((int)(movement.angle * 100) % 100),
@@ -273,36 +321,48 @@ void loop() {
     if (sensors.ball.exists() && !sensors.hasBall) {
         // Move behind the ball if we can see it somewhere else on the field
 
-        // We can't just move straight at the ball. We need to move behind
-        // it in a curve. Here, we calculate the angle offset we need to
-        // achieve this.
+        // We can't just move straight at the ball. We need to move
+        // behind it in a curve. Here, we calculate the angle offset we
+        // need to achieve this.
         const auto angleOffset =
             // The angle offset is directly related to the angle of the
             // ball, but we constrain it to 90º because the robot should
-            // never move in a range greater than 90º away from the ball, as
-            // it would be moving away from the ball.
+            // never move in a range greater than 90º away from the
+            // ball, as it would be moving away from the ball.
             constrain(sensors.ball.angle, -90, 90) *
             // The angle offset undergoes exponential decay. As the ball
-            // gets closer to the robot, the robot moves more directly at
-            // the ball.
-            fmin(BALL_MOVEMENT_A *
-                     pow(exp(1), BALL_MOVEMENT_B * sensors.ball.distance),
+            // gets closer to the robot, the robot moves more directly
+            // at the ball.
+            fmin(powf(exp(1), BALL_MOVEMENT_DECAY * (BALL_MOVEMENT_MAX_CURVE -
+                                                     sensors.ball.distance)),
                  1.0);
 
         // Then, we pack it into instructions for our update function.
+        // Try to keep straight as much as possible to ensure the robot has to
+        // leave the field the least if the ball is near the boundary.
+        movement.heading =
+            constrain(sensors.ball.angle, -BALL_MOVEMENT_MAX_HEADING,
+                      BALL_MOVEMENT_MAX_HEADING);
         movement.angle = sensors.ball.angle + angleOffset;
-        movement.velocity = 400;
+        // We have to decelerate as we approach the ball to not overshoot it, as
+        // the FPS of the camera would not be able to keep up with the robot's
+        // movement.
+        movement.setLinearDecelerate(
+            BALL_MOVEMENT_START_SPEED, BALL_MOVEMENT_END_SPEED,
+            sensors.ball.distance / BALL_MOVEMENT_START_DECELERATING);
         movement.dribble = false;
     } else if (sensors.hasBall) {
         // Move to the goal if we have the ball
 
-        // We use a similar curve algorithm for tracking the goal, but with a
-        // constant multiplier instead of an exponential decay multiplier as we
-        // want the robot to take a big orbit path, such that it has more space
-        // to position itself before shooting.
+        // We use a similar curve algorithm for tracking the goal, but
+        // with a constant multiplier instead of an exponential decay
+        // multiplier as we want the robot to take a big orbit path,
+        // such that it has more space to position itself before shooting.
         const auto angleOffset =
-            constrain(sensors.goals.offensive.angle, -90, 90) * GOAL_MOVEMENT_M;
+            constrain(sensors.goals.offensive.angle, -90, 90) *
+            GOAL_MOVEMENT_MULTIPLIER;
         // Then, we pack it into instructions for our update function.
+        movement.heading = sensors.goals.offensive.angle;
         movement.angle = sensors.goals.offensive.angle + angleOffset;
         movement.velocity = 400;
         // movement.dribble = true; // TODO: enable when dribbler works
@@ -325,17 +385,23 @@ void loop() {
         movement.dribble = false;
     }
 
-    movement.setMoveTo(NEUTRAL_SPOT_CENTER, 0, sensors.goals);
-    movement.dribble = false;
-
     // Slow down near the wall
-    // TODO
+    if ((sensors.bounds.left.established() &&
+         sensors.bounds.left.value <= WALL_AVOIDANCE_THRESHOLD) ||
+        (sensors.bounds.right.established() &&
+         sensors.bounds.right.value <= WALL_AVOIDANCE_THRESHOLD)) {
+        const auto distanceToWall =
+            fmin(sensors.bounds.left.value, sensors.bounds.right.value);
+        movement.setLinearDecelerate(WALL_AVOIDANCE_START_SPEED,
+                                     WALL_AVOIDANCE_END_SPEED,
+                                     distanceToWall / WALL_AVOIDANCE_THRESHOLD);
+    }
 
     // Avoid the lines
-    if (sensors.line.newData && sensors.line.exists()) {
+    if (sensors.line.exists()) {
         if (sensors.line.depth < LINE_AVOIDANCE_THRESHOLD) {
             // Stop inside the line to prevent jerking
-            movement.stop = true;
+            movement.setStop();
             // TODO: Line track towards the ball
         } else {
             // Move away from the line

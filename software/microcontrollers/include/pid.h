@@ -7,7 +7,7 @@ class PIDController {
   public:
     PIDController(const float setpoint, const float min, const float max,
                   const float kp, const float ki, const float kd,
-                  const uint32_t minDt = 0);
+                  const uint32_t minDt = 0, const float maxi = infinityf());
 
     // Update controller
     float advance(const float input);
@@ -30,6 +30,7 @@ class PIDController {
     float _ki;
     float _kd;
     uint32_t _minDt;
+    float _maxi;
     // Internal values
     float _integral = 0.0F;
     float _lastError = 0.0F;

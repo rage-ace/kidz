@@ -67,10 +67,10 @@ struct TOFConfig {
 
 #define TOF_COUNT 4
 const std::array<TOFConfig, TOF_COUNT> TOF_CONFIGS = {{
-    {PIN_XSHUT_FRONT, VL53L1X::Short, 33000, 33}, // Front
-    {PIN_XSHUT_BACK, VL53L1X::Short, 33000, 33},  // Back
+    {PIN_XSHUT_FRONT, VL53L1X::Short, 20000, 20}, // Front
+    {PIN_XSHUT_BACK, VL53L1X::Short, 20000, 20},  // Back
     {PIN_XSHUT_LEFT, VL53L1X::Short, 20000, 20},  // Left
-    {PIN_XSHUT_RIGHT, VL53L1X::Short, 20000, 20} // Right
+    {PIN_XSHUT_RIGHT, VL53L1X::Short, 20000, 20}  // Right
 }};
 
 #endif

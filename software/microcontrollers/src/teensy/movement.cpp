@@ -31,16 +31,29 @@ void Movement::init() {
     analogWriteFrequency(PIN_DRIBBLER_PWM, 1000);
     pinMode(PIN_DRIBBLER_PWM, OUTPUT);
 
+#ifndef DISABLE_DRIBBLER
     // Arm dribbler
     analogWrite(PIN_DRIBBLER_PWM, 128);
     delay(3000);
+#endif
 }
 
 void Movement::updateHeadingController(const float angle) {
-    _angularVelocity = _headingController.advance(angle);
     _actualHeading = angle;
 }
 
+void Movement::setStop(bool maintainHeading) {
+    if (maintainHeading) {
+        // Since we want to maintain heading, let's just set velocity to 0
+        velocity = 0;
+    } else {
+        // Since we don't need to maintain heading, we can brake the drivers
+        _brake = true;
+    }
+}
+
+// Sets the robot to move to a certain cartesian position on the field given the
+// position of the two goals. We are also able to move to a target heading.
 void Movement::setMoveTo(const Point &destination, const float targetHeading,
                          const Goals &goals) {
     // We use an algorithm that allows us to minimise error propagated by goal
@@ -62,7 +75,7 @@ void Movement::setMoveTo(const Point &destination, const float targetHeading,
         // A new move to routine just started
         _lastDestination = new Point(destination);
         _initialDistance = relativeDestination.distance;
-        _moveToController.reset();
+        moveToController.reset();
     }
 
     // Pack it into instructions for our update function
@@ -71,8 +84,8 @@ void Movement::setMoveTo(const Point &destination, const float targetHeading,
     if (relativeDestination.distance > MOVE_TO_PRECISION) {
         // The destination hasn't been reached
         // We square the error to make it decelerate linearly
-        const auto controllerError = -pow(relativeDestination.distance, 2);
-        velocity = _moveToController.advance(controllerError);
+        const auto controllerError = -powf(relativeDestination.distance, 2);
+        velocity = moveToController.advance(controllerError);
         heading = (targetHeading - _actualHeading) *
                   fmin(relativeDestination.distance / _initialDistance, 1.0);
     } else {
@@ -82,15 +95,25 @@ void Movement::setMoveTo(const Point &destination, const float targetHeading,
     }
 }
 
+// Sets the velocity to decrease such that deceleration is linear from the start
+// speed to the end speed, using a multiplier between 0.0 and 1.0.
+void Movement::setLinearDecelerate(const int16_t startSpeed,
+                                   const int16_t endSpeed,
+                                   const float multiplier) {
+    velocity =
+        (startSpeed - endSpeed) * powf(fmin(multiplier, 1.0), 2) + endSpeed;
+}
+
 // Writes the current movement data.
 void Movement::update() {
-    if (stop) {
+    if (_brake) {
         // Stop the motors
+        // (I'd like to brake the drivers LOW if implemented in hardware)
         analogWrite(PIN_MOTOR_FL_PWM, 0);
         analogWrite(PIN_MOTOR_FR_PWM, 0);
         analogWrite(PIN_MOTOR_BL_PWM, 0);
         analogWrite(PIN_MOTOR_BR_PWM, 0);
-        stop = false;
+        _brake = false;
         return;
     }
 
@@ -104,7 +127,9 @@ void Movement::update() {
         return (int16_t)roundf(velocity_ * velocity + angularComponent);
     };
     // Find angular component
-    const auto angular = 0.25F * _angularVelocity;
+    headingController.setpoint = heading; // Update if target heading changed
+    const auto angularVelocity = headingController.advance(_actualHeading);
+    const auto angular = 0.25F * angularVelocity;
     // Compute speeds
     const int16_t FLSpeed = transformSpeed(x * COS45 + y * SIN45, angular);
     const int16_t FRSpeed = transformSpeed(x * -COS45 + y * SIN45, -angular);
@@ -132,9 +157,11 @@ void Movement::update() {
     analogWrite(PIN_MOTOR_BL_PWM, constrainSpeed(BLSpeed));
     analogWrite(PIN_MOTOR_BR_PWM, constrainSpeed(BRSpeed));
 
+#ifndef DISABLE_DRIBBLER
     // Set dribbler motor speed
     analogWrite(PIN_DRIBBLER_PWM,
                 dribble ? DRIBBLER_SPEED : DRIBBLER_ARM_SPEED);
+#endif
 
     // Deactivate solenoid if duration has elapsed
     if (_kickerActivated && millis() - _kickTime > KICKER_ACTIVATION_DURATION) {

@@ -8,14 +8,16 @@
 #include "vector.h"
 
 // Flags
-#define DEBUG_TEENSY
+// #define DEBUG_TEENSY
 // #define DEBUG_MUX
 // #define DEBUG_IMU
 // #define DEBUG_TOF
 // #define DEBUG_CORAL
 // #define CALIBRATE_IMU
 // #define CALIBRATE_MUX
-// #define CALIBRATE_ROBOT_ANGLE_CONTROLLER
+// #define CALIBRATE_ROBOT_ANGLE
+#define CALIBRATE_BALL_CURVE
+#define DISABLE_DRIBBLER
 
 // Macro Flags
 #ifdef DEBUG_TEENSY
@@ -41,7 +43,10 @@
     #define CALIBRATE
     #define DONT_WAIT_FOR_SUBPROCESSOR_INIT
 #endif
-#ifdef CALIBRATE_ROBOT_ANGLE_CONTROLLER
+#ifdef CALIBRATE_ROBOT_ANGLE
+    #define CALIBRATE
+#endif
+#ifdef CALIBRATE_BALL_CURVE
     #define CALIBRATE
 #endif
 
@@ -89,7 +94,7 @@
 // when compared to this number of previous line angles
 #define LINE_ANGLE_HISTORY 2
 
-#define LIGHTGATE_THRESHOLD 650
+#define LIGHTGATE_THRESHOLD 800
 
 // true if blue is the offensive goal, false if yellow is the offensive goal
 #define TARGET_BLUE_GOAL false
@@ -100,25 +105,61 @@
 #define DRIBBLER_ARM_SPEED         (int16_t)520
 #define DRIBBLER_SPEED             (int16_t)600
 #define KICKER_ACTIVATION_DURATION 100  // in ms
-#define KICKER_COOLDOWN_DURATION   1000 // in ms
-#define MOVE_TO_PRECISION          3.5F // in cm
+#define KICKER_COOLDOWN_DURATION   1500 // in ms
 
-// Multiplier = A * e^(B * ballDistance)
-#define BALL_MOVEMENT_A 1e-0F
-#define BALL_MOVEMENT_B 16.0F
-// Multiplier = M
-#define GOAL_MOVEMENT_M 0.5F
+// ------------------------------- Robot Heading -------------------------------
+
+#define KP_ROBOT_ANGLE   3.6e1F  // tuned to ±0.2e1F
+#define KI_ROBOT_ANGLE   2.5e-5F // tuned to ±0.5e-5F
+#define KD_ROBOT_ANGLE   5.0e6F  // tuned to ±0.5e6F
+#define MAXI_ROBOT_ANGLE 1000.0F // TODO: Tune
+// PD version but the kP was probably too high
+// #define KP_ROBOT_ANGLE     5.8e1F // tuned to ±0.1e1F
+// #define KI_ROBOT_ANGLE     0
+// #define KD_ROBOT_ANGLE     2.7e6F // tuned to ±0.05e6F
+#define MIN_DT_ROBOT_ANGLE 5000 // in µs, minimum value for kD to have effect
+
+// -------------------------------- Robot Speed --------------------------------
+
+// This is the main speed the robot will be travelling at throughout gameplay,
+// and probably the fastest speed. Other aspects of gameplay will start from
+// this speed and decelerate where necessary.
+#define BASE_SPEED 500.0F
+
+// ------------------------------- Ball Movement -------------------------------
+
+// Multiplier = e^(DECAY * (START - Ball Distance))
+// https://www.desmos.com/calculator/ixwhywbd5i
+// This is the distance where we start curving maximally as the ball gets closer
+#define BALL_MOVEMENT_MAX_CURVE 12.0F // in cm
+// The larger the value, the faster the decay of the angle offset
+#define BALL_MOVEMENT_DECAY 0.03F
+
+#define BALL_MOVEMENT_START_DECELERATING 45.0F // in cm
+#define BALL_MOVEMENT_START_SPEED        BASE_SPEED
+#define BALL_MOVEMENT_END_SPEED          250.0F
+
+#define BALL_MOVEMENT_MAX_HEADING 20.0F // in degrees
+
+// ------------------------------- Goal Movement -------------------------------
+
+#define GOAL_MOVEMENT_MULTIPLIER 0.2F
+
+// ------------------------------- Line Avoidance ------------------------------
 
 #define LINE_AVOIDANCE_THRESHOLD        0.2F
 #define LINE_AVOIDANCE_SPEED_MULTIPLIER 2000.0F // TODO: tune
 #define LINE_AVOIDANCE_MAX_SPEED        1023.0F // TODO: tune
 
-// PID Constants
-// kU = 18e-2F
-#define KP_ROBOT_ANGLE     5.4e1F
-#define KI_ROBOT_ANGLE     0e-5F
-#define KD_ROBOT_ANGLE     4.6e6F
-#define MIN_DT_ROBOT_ANGLE 5000 // in µs, minimum value for kD to have effect
+// ------------------------------ Wall Avoidance -------------------------------
+// Note that our TOFs probably can't sense beyond 70 cm
+#define WALL_AVOIDANCE_THRESHOLD   40.0F // in cm
+#define WALL_AVOIDANCE_START_SPEED BASE_SPEED
+#define WALL_AVOIDANCE_END_SPEED   100.0F
+
+// ------------------------------- Localisation --------------------------------
+
+#define MOVE_TO_PRECISION 3.5F // in cm
 
 #define KP_MOVE_TO     1.4e0F
 #define KI_MOVE_TO     0e0F
@@ -134,5 +175,7 @@
 #define NEUTRAL_SPOT_BL     (Point){-11.5, -45}
 #define NEUTRAL_SPOT_BR     (Point){11.5, -45}
 // clang-format on
+
+// -----------------------------------------------------------------------------
 
 #endif

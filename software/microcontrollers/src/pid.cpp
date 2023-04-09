@@ -5,9 +5,10 @@
 // A simple PID controller.
 PIDController::PIDController(const float setpoint, const float min,
                              const float max, const float kp, const float ki,
-                             const float kd, const uint32_t minDt)
+                             const float kd, const uint32_t minDt,
+                             const float maxi)
     : setpoint(setpoint), _min(min), _max(max), _kp(kp), _ki(ki), _kd(kd),
-      _minDt(minDt) {}
+      _minDt(minDt), _maxi(maxi / ki) {}
 
 // Update controller,
 float PIDController::advance(const float input) {
@@ -28,6 +29,7 @@ float PIDController::advance(const float input) {
     // Find PID components
     const auto error = setpoint - input;
     _integral += error * dt;
+    _integral = constrain(_integral, -_maxi, _maxi);
     const auto p = _kp * error;
     const auto i = _ki * _integral;
     const auto d = _kd * (error - _lastError) / dt;

@@ -93,9 +93,14 @@ void loop() {
     // Read TOF ranges
     for (uint8_t i = 0; i < TOF_COUNT; i++) {
         tofs[i].read();
-        if (tofs[i].ranging_data.range_status == VL53L1X::RangeValid)
+        if (tofs[i].ranging_data.range_status == VL53L1X::RangeValid ||
+            tofs[i].ranging_data.range_status == VL53L1X::SignalFail)
+            // If the range is valid we use it
+            // We consider the range valid even if the signal value is below the
+            // minimum defined threshold to let us to use smaller timing budgets
             bounds.set(i, tofs[i].ranging_data.range_mm);
         else if (tofs[i].ranging_data.range_status == VL53L1X::None)
+            // If there is no update, we set the new value as NO_BOUNDS
             bounds.set(i);
     }
 
