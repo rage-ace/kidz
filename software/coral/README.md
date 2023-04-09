@@ -7,8 +7,9 @@
 sudo nmtui
 sudo nano /etc/hosts  # Also change your hostname here to "kidz"
 
-# Use one-shot autofocus
-echo 1 > /sys/module/ov5645_camera_mipi_v2/parameters/ov5645_af
+# Setup autofocus
+snapshot  # Send 'r' to focus once
+# The run scripts disable autofocus
 
 # Install python dependencies
 sudo python3 -m pip install -r requirements.txt  # We will be running the script with root
