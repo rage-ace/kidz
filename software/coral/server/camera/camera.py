@@ -42,8 +42,8 @@ class MemoryManager:
         self.params = {
             "frame": {
                 "shape": (480, 640),
-                "center_offset": [0, 11],
-                "crop_radius": 195,
+                "center_offset": [-2, 23],
+                "crop_radius": 194,
             },
             "mask": {
                 "robot_radius": 25,

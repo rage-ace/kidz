@@ -1,11 +1,26 @@
+import sys
 import time
+import logging
+import traceback
 from camera import Camera
 
 
 DEBUG = False
 
 
+log = logging.getLogger("noserver")
+
+
+def exc_handler(exctype, value, tb):
+    log.exception("".join(traceback.format_exception(exctype, value, tb)))
+
+
 def main():
+    # Set up logging
+    file_handler = logging.FileHandler("noserver.log")
+    log.addHandler(file_handler)
+    sys.excepthook = exc_handler # log all uncaught exceptions
+
     camera = Camera()
     camera.start()
 
