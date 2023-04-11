@@ -6,19 +6,7 @@
 // Counters
 auto debugPrintCounter = Counter();
 
-void performSetupDebug() {
-    // // ESC (128-256)
-    // pinMode(PIN_DRIBBLER_PWM, OUTPUT);
-    // analogWriteFrequency(PIN_DRIBBLER_PWM, 1000);
-    // analogWriteResolution(10);
-    // analogWrite(PIN_DRIBBLER_PWM, 128);
-
-    // // give time for arming sequence
-    // delay(4000);
-    // Serial.setTimeout(10);
-
-    // while (1) { analogWrite(PIN_DRIBBLER_PWM, 200); }
-}
+void performSetupDebug() {}
 
 void performLoopDebug() {
 #ifdef DEBUG_MUX
@@ -61,74 +49,79 @@ void performLoopDebug() {
         Serial.printf("Line ");
         if (sensors.line.exists())
             Serial.printf("%4d.%02dº ", (int)sensors.line.angleBisector,
-                          abs((int)(sensors.line.angleBisector * 100) % 100));
+                          abs(sensors.line.angleBisector * 100) % 100);
         else
             Serial.printf("         ");
         Serial.printf("%01d.%02d | ", (int)sensors.line.depth,
                       abs((int)(sensors.line.depth * 100) % 100));
-        if (sensors.robot.established())
-            Serial.printf("Robot Angle %4d.%02dº | ", (int)sensors.robot.angle,
-                          abs((int)(sensors.robot.angle * 100) % 100));
+        if (sensors.robot.angle.established())
+            Serial.printf("Robot Angle %4d.%02dº | ",
+                          (int)sensors.robot.angle.value,
+                          abs(sensors.robot.angle.value * 100) % 100);
         else
             Serial.printf("Robot Angle          | ");
-        // Serial.print("Bounds ");
-        // if (sensors.bounds.front.established())
-        //     Serial.printf("F: %3d.%1d cm ",
-        //     (int)sensors.bounds.front.value,
-        //                   abs((int)(sensors.bounds.front.value * 10)
-        //                   % 10));
-        // else
-        //     Serial.printf("F:          ");
-        if (sensors.bounds.back.established())
+        if (sensors.robot.position.exists()) {
+            Serial.printf(
+                "Position %4d.%02dº %3d.%02d cm | ",
+                (int)sensors.robot.position.value.angle,
+                abs((int)(sensors.robot.position.value.angle * 100) % 100),
+                (int)sensors.robot.position.value.distance,
+                abs((int)(sensors.robot.position.value.distance * 100) % 100));
+        } else {
+            Serial.printf("Position                    | ");
+        }
+        Serial.print("Bounds ");
+        if (sensors.bounds.front.valid())
+            Serial.printf("F: %3d.%1d cm ", (int)sensors.bounds.front.value,
+                          abs((int)(sensors.bounds.front.value * 10) % 10));
+        else
+            Serial.printf("F:          ");
+        if (sensors.bounds.back.valid())
             Serial.printf("B: %3d.%1d cm ", (int)sensors.bounds.back.value,
                           abs((int)(sensors.bounds.back.value * 10) % 10));
         else
             Serial.printf("B:          ");
-        // if (sensors.bounds.left.established())
-        //     Serial.printf("L: %3d.%1d cm ",
-        //     (int)sensors.bounds.left.value,
-        //                   abs((int)(sensors.bounds.left.value * 10) %
-        //                   10));
-        // else
-        //     Serial.printf("L:          ");
-        // if (sensors.bounds.right.established())
-        //     Serial.printf("R: %3d.%1d cm | ",
-        //     (int)sensors.bounds.right.value,
-        //                   abs((int)(sensors.bounds.right.value * 10)
-        //                   % 10));
-        // else
-        //     Serial.printf("R:          | ");
-        if (sensors.ball.exists())
+        if (sensors.bounds.left.valid())
+            Serial.printf("L: %3d.%1d cm ", (int)sensors.bounds.left.value,
+                          abs((int)(sensors.bounds.left.value * 10) % 10));
+        else
+            Serial.printf("L:          ");
+        if (sensors.bounds.right.valid())
+            Serial.printf("R: %3d.%1d cm | ", (int)sensors.bounds.right.value,
+                          abs((int)(sensors.bounds.right.value * 10) % 10));
+        else
+            Serial.printf("R:          | ");
+        if (sensors.ball.value.exists())
             Serial.printf("Ball %4d.%02dº %4d.%02d cm | ",
-                          (int)sensors.ball.angle,
-                          abs((int)(sensors.ball.angle * 100) % 100),
-                          (int)sensors.ball.distance,
-                          abs((int)(sensors.ball.distance * 100) % 100));
+                          (int)sensors.ball.value.angle,
+                          abs((int)(sensors.ball.value.angle * 100) % 100),
+                          (int)sensors.ball.value.distance,
+                          abs((int)(sensors.ball.value.distance * 100) % 100));
         else
             Serial.printf("Ball                     | ");
         Serial.printf("Has Ball: %d | ", sensors.hasBall);
-        // if (sensors.goals.exist())
+        Serial.printf("Goal O ");
+        // if (sensors.goals.offensive.exists())
         //     Serial.printf(
-        //         "Goal O %4d.%02dº %4d.%02d cm D %4d.%02dº %4d.%02d cm
-        //         |
-        //         ", (int)sensors.goals.offensive.angle,
-        //         abs((int)(sensors.goals.offensive.angle * 100) %
-        //         100), (int)sensors.goals.offensive.distance,
-        //         abs((int)(sensors.goals.offensive.distance * 100) %
-        //         100), (int)sensors.goals.defensive.angle,
-        //         abs((int)(sensors.goals.defensive.angle * 100) %
-        //         100), (int)sensors.goals.defensive.distance,
-        //         abs((int)(sensors.goals.defensive.distance * 100) %
-        //         100));
+        //         "%4d.%02dº %4d.%02d cm D ",
+        //         (int)sensors.goals.offensive.angle,
+        //         abs((sensors.goals.offensive.angle * 100) % 100),
+        //         (int)sensors.goals.offensive.distance,
+        //         abs((sensors.goals.offensive.distance * 100) % 100));
         // else
+        //     Serial.printf("                    D ");
+        // if (sensors.goals.defensive.exists())
         //     Serial.printf(
-        //         "Goal                                             |
-        //         ");
-        Serial.printf("Other Robot: 0x%02X | ", sensors.otherRobot.testByte);
-        Serial.printf("Drive %4d.%02dº at %4d.%02d | ", (int)movement.angle,
+        //         "%4d.%02dº %4d.%02d cm | ",
+        //         (int)sensors.goals.defensive.angle,
+        //         abs((sensors.goals.defensive.angle * 100) % 100),
+        //         (int)sensors.goals.defensive.distance,
+        //         abs((sensors.goals.defensive.distance * 100) % 100));
+        // else
+        //     Serial.printf("                    | ");
+        Serial.printf("Drive %4d.%02dº at %4d | ", (int)movement.angle,
                       abs((int)(movement.angle * 100) % 100),
-                      (int)movement.velocity,
-                      abs((int)(movement.velocity * 100) % 100));
+                      movement.velocity);
         Serial.println();
     }
 

@@ -37,8 +37,8 @@ void Movement::init() {
     pinMode(PIN_DRIBBLER_PWM, OUTPUT);
 
     // Arm dribbler
-    analogWrite(PIN_DRIBBLER_PWM, 128);
-    delay(3000);
+    analogWrite(PIN_DRIBBLER_PWM, DRIBBLER_ARM_SPEED);
+    delay(DRIBBLER_ARM_DURATION);
 #endif
 }
 
@@ -58,21 +58,9 @@ void Movement::setStop(bool maintainHeading) {
 
 // Sets the robot to move to a certain cartesian position on the field given the
 // position of the two goals. We are also able to move to a target heading.
-void Movement::setMoveTo(const Point &destination, const float targetHeading,
-                         const Goals &goals) {
-    // We use an algorithm that allows us to minimise error propagated by goal
-    // distance and rely more on goal angle
-
-    // Compute reference vectors
-    const auto center = (goals.offensive + goals.defensive) / 2;
-    const auto centerToOffensiveGoal = goals.offensive - center;
-
-    // Compute destination vector with reference vectors
-    const auto realDestination = Vector::fromPoint(destination);
-    const auto scalingFactor =
-        centerToOffensiveGoal.distance / HALF_GOAL_SEPARATION;
-    const auto scaledDestination = realDestination * scalingFactor;
-    const auto relativeDestination = center + scaledDestination;
+void Movement::setMoveTo(const Vector &robot, const Point &destination,
+                         const float targetHeading) {
+    const auto relativeDestination = -robot + Vector::fromPoint(destination);
 
     // Update move to state
     if (_lastDestination == nullptr || *_lastDestination != destination) {

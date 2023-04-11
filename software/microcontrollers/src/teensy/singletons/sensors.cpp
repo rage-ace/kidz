@@ -152,27 +152,49 @@ void Sensors::onTofPacket(const byte *buf, size_t size) {
     if (size != sizeof(payload)) return;
     memcpy(&payload, buf, sizeof(payload));
 
-    // Update bounds data
-    _bounds.front.newData = payload.bounds.front.newData;
-    _bounds.back.newData = payload.bounds.back.newData;
-    _bounds.left.newData = payload.bounds.left.newData;
-    _bounds.right.newData = payload.bounds.right.newData;
-    if (payload.bounds.front.value == NO_BOUNDS)
-        _bounds.front.value = NAN;
-    else
-        _bounds.front.value = (float)payload.bounds.front.value / 10;
-    if (payload.bounds.back.value == NO_BOUNDS)
-        _bounds.back.value = NAN;
-    else
-        _bounds.back.value = (float)payload.bounds.back.value / 10;
-    if (payload.bounds.left.value == NO_BOUNDS)
-        _bounds.left.value = NAN;
-    else
-        _bounds.left.value = (float)payload.bounds.left.value / 10;
-    if (payload.bounds.right.value == NO_BOUNDS)
-        _bounds.right.value = NAN;
-    else
-        _bounds.right.value = (float)payload.bounds.right.value / 10;
+    // Update bounds data if we have the robot angle
+    if (_robot.angle.established()) {
+        _bounds.front.newData = payload.bounds.front.newData;
+        _bounds.back.newData = payload.bounds.back.newData;
+        _bounds.left.newData = payload.bounds.left.newData;
+        _bounds.right.newData = payload.bounds.right.newData;
+
+        // Calculate bounds, taking into account robot angle
+        // TODO: Come up with a more robust way to do this that fits a rectangle
+        // to the measured distances
+        if (payload.bounds.front.value == NO_BOUNDS &&
+            payload.bounds.front.value <= TOF_MAX_DISTANCE) {
+            _bounds.front.value = NAN;
+        } else {
+            const auto measurement = (float)payload.bounds.front.value / 10;
+            _bounds.front.value =
+                measurement * fabsf(cosfd(_robot.angle.value));
+        }
+        if (payload.bounds.back.value == NO_BOUNDS &&
+            payload.bounds.back.value <= TOF_MAX_DISTANCE) {
+            _bounds.back.value = NAN;
+        } else {
+            const auto measurement = (float)payload.bounds.back.value / 10;
+            _bounds.back.value = measurement * fabsf(cosfd(_robot.angle.value));
+        }
+        if (payload.bounds.left.value == NO_BOUNDS &&
+            payload.bounds.left.value <= TOF_MAX_DISTANCE) {
+            _bounds.left.value = NAN;
+        } else {
+            const auto measurement = (float)payload.bounds.left.value / 10;
+            _bounds.left.value = measurement * fabsf(cosfd(_robot.angle.value));
+        }
+        if (payload.bounds.right.value == NO_BOUNDS &&
+            payload.bounds.right.value <= TOF_MAX_DISTANCE) {
+            _bounds.right.value = NAN;
+        } else {
+            const auto measurement = (float)payload.bounds.right.value / 10;
+            _bounds.right.value =
+                measurement * fabsf(cosfd(_robot.angle.value));
+        }
+
+        _updateRobotPosition();
+    }
 
     // Update bluetooth data
     _otherRobot = payload.bluetoothInboundPayload;
@@ -197,10 +219,10 @@ void Sensors::onImuPacket(const byte *buf, size_t size) {
         _robotAngleOffset = robotAngle;
 
     // Update new flag
-    _robot.newData = payload.imu.newData;
+    _robot.angle.newData = payload.imu.newData;
 
     // Update robot angle
-    _robot.angle = clipAngle(robotAngle - _robotAngleOffset);
+    _robot.angle.value = clipAngle(robotAngle - _robotAngleOffset);
 
     // Consider the STM32 IMU to be initialised
     _imuInit = true;
@@ -215,29 +237,114 @@ void Sensors::onCoralPacket(const byte *buf, size_t size) {
 
     // Update ball data
     _ball.newData = payload.camera.newData;
-    _ball.angle = payload.camera.ballAngle != INT16_MAX
-                      ? (float)payload.camera.ballAngle / 100
-                      : NAN;
-    _ball.distance = payload.camera.ballDistance != UINT16_MAX
-                         ? (float)payload.camera.ballDistance / 100
-                         : NAN;
+    _ball.value = {payload.camera.ballAngle != INT16_MAX
+                       ? (float)payload.camera.ballAngle / 100
+                       : NAN,
+                   payload.camera.ballDistance != UINT16_MAX
+                       ? (float)payload.camera.ballDistance / 100
+                       : NAN};
 
     // Update goal data
     _goals.newData = payload.camera.newData;
 #if TARGET_BLUE_GOAL
-    _goals.offensive = {(float)payload.camera.blueGoalAngle / 100,
-                        (float)payload.camera.blueGoalDistance / 100};
-    _goals.defensive = {(float)payload.camera.yellowGoalAngle / 100,
-                        (float)payload.camera.yellowGoalDistance / 100};
+    _goals.offensive = {payload.camera.blueGoalAngle != INT16_MAX
+                            ? (float)payload.camera.blueGoalAngle / 100
+                            : NAN,
+                        payload.camera.blueGoalDistance != UINT16_MAX
+                            ? (float)payload.camera.blueGoalDistance / 100
+                            : NAN};
+    _goals.defensive = {payload.camera.yellowGoalAngle != INT16_MAX
+                            ? (float)payload.camera.yellowGoalAngle / 100
+                            : NAN,
+                        payload.camera.yellowGoalDistance != UINT16_MAX
+                            ? (float)payload.camera.yellowGoalDistance / 100
+                            : NAN};
 #else
-    _goals.offensive = {(float)payload.camera.yellowGoalAngle / 100,
-                        (float)payload.camera.yellowGoalDistance / 100};
-    _goals.defensive = {(float)payload.camera.blueGoalAngle / 100,
-                        (float)payload.camera.blueGoalDistance / 100};
+    _goals.offensive = {payload.camera.yellowGoalAngle != INT16_MAX
+                            ? (float)payload.camera.yellowGoalAngle / 100
+                            : NAN,
+                        payload.camera.yellowGoalDistance != UINT16_MAX
+                            ? (float)payload.camera.yellowGoalDistance / 100
+                            : NAN};
+    _goals.defensive = {payload.camera.blueGoalAngle != INT16_MAX
+                            ? (float)payload.camera.blueGoalAngle / 100
+                            : NAN,
+                        payload.camera.blueGoalDistance != UINT16_MAX
+                            ? (float)payload.camera.blueGoalDistance / 100
+                            : NAN};
 #endif
+
+    _updateRobotPosition();
 
     // Consider the Coral to be initialised
     _coralInit = true;
+}
+
+void Sensors::_updateRobotPosition() {
+    if (_goals.offensive.exists() && _goals.defensive.exists()) {
+        // We can see both goals, so we can perform localisation with that :D
+
+        // We use an algorithm that allows us to minimise error propagated by
+        // goal distance and rely more on goal angle
+
+        // Computer a "real" center vector from the two goal vectors
+        const auto fakeCenter = (goals.offensive + goals.defensive) / 2;
+        const auto scalingFactor =
+            (goals.offensive - fakeCenter).distance / HALF_GOAL_SEPARATION;
+        const auto realCenter = fakeCenter * scalingFactor;
+
+        // Update robot position
+        _robot.position.value = -realCenter;
+    } else if (_goals.offensive.exists()) {
+        // Compute a "fake" center vector from the offensive goal vector
+        const Vector realGoalToCenter = {180 - _robot.angle.value,
+                                         HALF_GOAL_SEPARATION};
+        const auto fakeCenter = _goals.offensive + realGoalToCenter;
+
+        // Update robot position
+        _robot.position.value = -fakeCenter;
+    } else if (_goals.defensive.exists()) {
+        // Compute a "fake" center vector from the defensive goal vector
+        const Vector realGoalToCenter = {-_robot.angle.value,
+                                         HALF_GOAL_SEPARATION};
+        const auto fakeCenter = _goals.defensive + realGoalToCenter;
+
+        // Update robot position
+        _robot.position.value = -fakeCenter;
+    } else {
+        // We can't see any goals, but we might be able to use the TOFs :0
+
+        if ((_bounds.front.valid() || _bounds.back.valid()) &&
+            (_bounds.left.valid() || _bounds.right.valid())) {
+            // Compute x
+            float x;
+            if (_bounds.left.valid() && _bounds.right.valid()) {
+                x = (_bounds.left.value - _bounds.right.value) *
+                    (_bounds.left.value + _bounds.right.value) / FIELD_WIDTH;
+            } else if (_bounds.left.valid()) {
+                x = -(FIELD_WIDTH / 2 - _bounds.left.value);
+            } else {
+                x = FIELD_WIDTH / 2 - _bounds.right.value;
+            }
+
+            // Compute y
+            float y;
+            if (_bounds.front.valid() && _bounds.back.valid()) {
+                y = (_bounds.back.value - _bounds.front.value) *
+                    (_bounds.front.value + _bounds.back.value) / FIELD_LENGTH;
+            } else if (_bounds.front.valid()) {
+                y = FIELD_LENGTH / 2 - _bounds.front.value;
+            } else {
+                y = -(FIELD_LENGTH / 2 - _bounds.back.value);
+            }
+
+            // Update robot position
+            _robot.position.value = Vector::fromPoint({x, y});
+        } else {
+            // We can't use the TOFs, so we can't localise :(
+            _robot.position.value = {};
+        }
+    }
 }
 
 void Sensors::read() {
@@ -253,7 +360,8 @@ void Sensors::read() {
 
 void Sensors::markAsRead() {
     _line.newData = false;
-    _robot.newData = false;
+    _robot.angle.newData = false;
+    _robot.position.newData = false;
     _bounds.front.newData = false;
     _bounds.back.newData = false;
     _bounds.left.newData = false;

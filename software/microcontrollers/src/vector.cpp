@@ -9,7 +9,7 @@ Vector::Vector(float angle, float distance)
     : angle(angle), distance(distance) {}
 
 Vector Vector::fromPoint(Point point) {
-    return {atan2fd(point.y, point.x),
+    return {atan2fd(point.x, point.y),
             sqrtf(point.x * point.x + point.y * point.y)};
 }
 
@@ -22,13 +22,15 @@ Vector &Vector::operator=(const Vector &other) {
 Vector Vector::operator+(const Vector &other) const {
     float x = distance * cosfd(angle) + other.distance * cosfd(other.angle);
     float y = distance * sinfd(angle) + other.distance * sinfd(other.angle);
-    return {atan2fd(y, x), sqrtf(x * x + y * y)};
+    return {atan2fd(x, y), sqrtf(x * x + y * y)};
 }
+
+Vector Vector::operator-() const { return {clipAngle(angle + 180), distance}; }
 
 Vector Vector::operator-(const Vector &other) const {
     float x = distance * cosfd(angle) - other.distance * cosfd(other.angle);
     float y = distance * sinfd(angle) - other.distance * sinfd(other.angle);
-    return {atan2fd(y, x), sqrtf(x * x + y * y)};
+    return {atan2fd(x, y), sqrtf(x * x + y * y)};
 }
 
 Vector Vector::operator*(const float other) const {

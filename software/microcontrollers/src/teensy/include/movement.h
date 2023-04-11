@@ -23,8 +23,8 @@ class Movement {
     void updateHeadingController(const float angle);
     // Set parameters in the body of the loop
     void setStop(bool maintainHeading = true);
-    void setMoveTo(const Point &destination, const float targetHeading,
-                   const Goals &goals);
+    void setMoveTo(const Vector &robot, const Point &destination,
+                   const float targetHeading);
     void setLinearDecelerate(const int16_t startSpeed, int16_t endSpeed,
                              const float multiplier,
                              const bool replaceVelocity = false);

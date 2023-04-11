@@ -71,7 +71,7 @@ void findLine() {
     for (uint8_t i = 0; i < matchCount - 1; ++i) {
         for (uint8_t j = i + 1; j < matchCount; ++j) {
             auto angleDifference =
-                abs(LDR_BEARINGS[matches[i]] - LDR_BEARINGS[matches[j]]);
+                fabsf(LDR_BEARINGS[matches[i]] - LDR_BEARINGS[matches[j]]);
             angleDifference =
                 angleDifference > 180 ? 360 - angleDifference : angleDifference;
             if (angleDifference > maxAngleDifference) {

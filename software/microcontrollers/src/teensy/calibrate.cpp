@@ -85,27 +85,28 @@ void performCalibration() {
 
         if (sensors.ball.exists()) {
             // Move behind the ball if we can see it somewhere else on the field
-            const auto multiplier = fmin(
-                powf(exp(1), BALL_MOVEMENT_DECAY * (BALL_MOVEMENT_MAX_CURVE -
-                                                    sensors.ball.distance)),
-                1.0);
+            const auto multiplier =
+                fmin(powf(exp(1),
+                          BALL_MOVEMENT_DECAY * (BALL_MOVEMENT_MAX_CURVE -
+                                                 sensors.ball.value.distance)),
+                     1.0);
             const auto angleOffset =
-                constrain(sensors.ball.angle, -90, 90) * multiplier;
+                constrain(sensors.ball.value.angle, -90, 90) * multiplier;
             movement.heading =
-                constrain(sensors.ball.angle, -BALL_MOVEMENT_MAX_HEADING,
+                constrain(sensors.ball.value.angle, -BALL_MOVEMENT_MAX_HEADING,
                           BALL_MOVEMENT_MAX_HEADING);
-            movement.angle = sensors.ball.angle + angleOffset;
+            movement.angle = sensors.ball.value.angle + angleOffset;
             movement.setLinearDecelerate(
                 BALL_MOVEMENT_START_SPEED, BALL_MOVEMENT_END_SPEED,
-                sensors.ball.distance / BALL_MOVEMENT_START_DECELERATING);
+                sensors.ball.value.distance / BALL_MOVEMENT_START_DECELERATING);
 
             // Print debug output
             Serial.print("Ball Distance: ");
-            Serial.print(sensors.ball.distance);
+            Serial.print(sensors.ball.value.distance);
             Serial.print(" | Multiplier: ");
             Serial.print(multiplier);
             Serial.print(" | Angle : ");
-            Serial.print(sensors.ball.angle);
+            Serial.print(sensors.ball.value.angle);
             Serial.print(" | Angle Offset: ");
             Serial.print(angleOffset);
             Serial.print(" | Movement angle: ");

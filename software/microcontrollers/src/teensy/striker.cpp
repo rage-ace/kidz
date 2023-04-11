@@ -12,26 +12,27 @@ void moveBehindBall() {
         // ball, but we constrain it to 90º because the robot should
         // never move in a range greater than 90º away from the
         // ball, as it would be moving away from the ball.
-        constrain(sensors.ball.angle, -90, 90) *
+        constrain(sensors.ball.value.angle, -90, 90) *
         // The angle offset undergoes exponential decay. As the ball
         // gets closer to the robot, the robot moves more directly
         // at the ball.
         fmin(powf(exp(1), BALL_MOVEMENT_DECAY * (BALL_MOVEMENT_MAX_CURVE -
-                                                 sensors.ball.distance)),
+                                                 sensors.ball.value.distance)),
              1.0);
 
     // Then, we pack it into instructions for our update function.
     // Try to keep straight as much as possible to ensure the robot has to
     // leave the field the least if the ball is near the boundary.
-    movement.heading = constrain(sensors.ball.angle, -BALL_MOVEMENT_MAX_HEADING,
-                                 BALL_MOVEMENT_MAX_HEADING);
-    movement.angle = sensors.ball.angle + angleOffset;
+    movement.heading =
+        constrain(sensors.ball.value.angle, -BALL_MOVEMENT_MAX_HEADING,
+                  BALL_MOVEMENT_MAX_HEADING);
+    movement.angle = sensors.ball.value.angle + angleOffset;
     // We have to decelerate as we approach the ball to not overshoot it, as
     // the FPS of the camera would not be able to keep up with the robot's
     // movement.
     movement.setLinearDecelerate(
         BALL_MOVEMENT_START_SPEED, BALL_MOVEMENT_END_SPEED,
-        sensors.ball.distance / BALL_MOVEMENT_START_DECELERATING);
+        sensors.ball.value.distance / BALL_MOVEMENT_START_DECELERATING);
     movement.dribble = false;
 }
 
@@ -62,9 +63,9 @@ void moveToGoal() {
 
 void avoidWall() {
     // Slow down near the wall
-    if ((sensors.bounds.left.established() &&
+    if ((sensors.bounds.left.valid() &&
          sensors.bounds.left.value <= WALL_AVOIDANCE_THRESHOLD) ||
-        (sensors.bounds.right.established() &&
+        (sensors.bounds.right.valid() &&
          sensors.bounds.right.value <= WALL_AVOIDANCE_THRESHOLD)) {
         const auto distanceToWall =
             fmin(sensors.bounds.left.value, sensors.bounds.right.value);
@@ -91,7 +92,7 @@ void avoidLine() {
 }
 
 void runStriker() {
-    if (sensors.ball.exists() && !sensors.hasBall) {
+    if (sensors.ball.value.exists() && !sensors.hasBall) {
         // Move behind the ball if we can see it somewhere else on the field
         moveBehindBall();
     } else if (sensors.hasBall) {
@@ -99,9 +100,10 @@ void runStriker() {
         moveToGoal();
     } else {
         // We can't find the ball
-        if (sensors.goals.exist()) {
-            // Return to center if we can see both goals
-            movement.setMoveTo(NEUTRAL_SPOT_CENTER, 0, sensors.goals);
+        if (sensors.robot.position.exists()) {
+            // Return to center if we can determine our position
+            movement.setMoveTo(sensors.robot.position.value,
+                               NEUTRAL_SPOT_CENTER, 0);
         } else {
             // Stay put
             movement.setStop();

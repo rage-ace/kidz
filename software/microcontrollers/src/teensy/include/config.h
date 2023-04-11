@@ -10,7 +10,7 @@
 // Flags
 #define MASTER
 // #define DEBUG
-// #define DEBUG_TEENSY
+#define DEBUG_TEENSY
 // #define DEBUG_MUX
 // #define DEBUG_IMU
 // #define DEBUG_TOF
@@ -20,7 +20,7 @@
 // #define CALIBRATE_ROBOT_ANGLE
 // #define CALIBRATE_BALL_CURVE
 // #define CALIBRATE_GOAL_MOVEMENT
-// #define DISABLE_DRIBBLER
+#define DISABLE_DRIBBLER
 
 // Macro Flags
 #ifdef DEBUG_TEENSY
@@ -99,16 +99,19 @@
 
 #define LIGHTGATE_THRESHOLD 800
 
+#define TOF_MAX_DISTANCE 130.0F // in cm
+
 // true if blue is the offensive goal, false if yellow is the offensive goal
 #define TARGET_BLUE_GOAL false
 
 // Movement Config
 #define DRIVE_STALL_SPEED          (int16_t)20
 #define DRIVE_MAX_SPEED            (int16_t)1023
-#define DRIBBLER_ARM_SPEED         (int16_t)520
-#define DRIBBLER_SPEED             (int16_t)1023
-#define KICKER_ACTIVATION_DURATION 100  // in ms
-#define KICKER_COOLDOWN_DURATION   1500 // in ms
+#define DRIBBLER_ARM_SPEED         (int16_t)128
+#define DRIBBLER_SPEED             (int16_t)190 // stalls at 177
+#define DRIBBLER_ARM_DURATION      2500         // in ms
+#define KICKER_ACTIVATION_DURATION 100          // in ms
+#define KICKER_COOLDOWN_DURATION   1500         // in ms
 
 // ------------------------------- Robot Heading -------------------------------
 
@@ -158,6 +161,7 @@
 #define LINE_AVOIDANCE_MAX_SPEED        1023.0F // TODO: tune
 
 // ------------------------------ Wall Avoidance -------------------------------
+
 // Note that our TOFs probably can't sense beyond 70 cm
 #define WALL_AVOIDANCE_THRESHOLD   40.0F // in cm
 #define WALL_AVOIDANCE_START_SPEED BASE_SPEED
@@ -174,6 +178,8 @@
 
 // Field Parameters
 #define HALF_GOAL_SEPARATION 107.5F // in cm
+#define FIELD_LENGTH         243.0F // in cm
+#define FIELD_WIDTH          182.0F // in cm
 // clang-format off
 #define NEUTRAL_SPOT_CENTER (Point){0, 0}
 #define NEUTRAL_SPOT_FL     (Point){-11.5, 45}

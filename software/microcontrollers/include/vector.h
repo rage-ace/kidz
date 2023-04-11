@@ -24,9 +24,12 @@ class Vector {
 
     Vector &operator=(const Vector &other);
     Vector operator+(const Vector &other) const;
+    Vector operator-() const;
     Vector operator-(const Vector &other) const;
     Vector operator*(const float other) const;
     Vector operator/(const float other) const;
+
+    bool exists() const { return !std::isnan(angle) && !std::isnan(distance); }
 };
 
 #endif

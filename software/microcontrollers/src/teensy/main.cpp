@@ -67,8 +67,8 @@ void loop() {
     sensors.read();
 
     // Maintain heading
-    if (sensors.robot.newData)
-        movement.updateHeadingController(sensors.robot.angle);
+    if (sensors.robot.angle.newData)
+        movement.updateHeadingController(sensors.robot.angle.value);
 
 #ifdef MASTER
     // Performs tasks as the master robot

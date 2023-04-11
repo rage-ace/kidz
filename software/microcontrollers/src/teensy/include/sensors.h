@@ -6,18 +6,13 @@
 #include <cstdint>
 #include <deque>
 
+#include "config.h"
 #include "shared_config.h"
 #include "vector.h"
 
 struct Goals {
     bool newData = false;
     Vector offensive, defensive;
-
-    bool exist() const {
-        return !std::isnan(offensive.angle) &&
-               !std::isnan(offensive.distance) &&
-               !std::isnan(defensive.angle) && !std::isnan(defensive.distance);
-    }
 };
 
 class Sensors {
@@ -41,10 +36,18 @@ class Sensors {
   private:
     // Write-possible private variables for sensor output
     struct {
-        bool newData = false;
-        float angle = NAN; // -179.99º to 180.00º
+        struct {
+            bool newData = false;
+            float value = NAN; // -179.99º to 180.00º
 
-        bool established() const { return !std::isnan(angle); }
+            bool established() const { return !std::isnan(value); }
+        } angle;
+        struct {
+            bool newData = false;
+            Vector value;
+
+            bool exists() const { return value.exists(); }
+        } position;
     } _robot;
     BluetoothPayload _otherRobot;
     struct {
@@ -57,9 +60,9 @@ class Sensors {
     struct {
         struct {
             bool newData = false;
-            float value = NAN; // 0.0 to ~70.0 cm
+            float value = NAN; // 0.0 to TOF_MAX_DISTANCE
 
-            bool established() const { return !std::isnan(value); }
+            bool valid() const { return !std::isnan(value); }
         } front, back, left, right;
 
         // Bounds in all four directions are established
@@ -70,12 +73,7 @@ class Sensors {
     } _bounds;
     struct {
         bool newData = false;
-        float angle = NAN;    // -179.99º to 180.00º
-        float distance = NAN; // 0.00 to ~150.00 cm
-
-        bool exists() const {
-            return !std::isnan(angle) && !std::isnan(distance);
-        }
+        Vector value;
     } _ball;
     Goals _goals;
     bool _hasBall = false; // Assume the robot does not have the ball initially
@@ -91,6 +89,8 @@ class Sensors {
     const decltype(_hasBall) &hasBall = _hasBall;
 
   private:
+    void _updateRobotPosition();
+
     // Serial managers to receive packets
     PacketSerial &_muxSerial;
     PacketSerial &_tofSerial;
