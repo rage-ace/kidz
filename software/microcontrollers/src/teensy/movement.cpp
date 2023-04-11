@@ -13,25 +13,29 @@ void Movement::init() {
     // Values from https://www.pjrc.com/teensy/td_pulse.html
     // (based on F_CPU_ACTUAL = 600 MHz)
     analogWriteResolution(10);
-    analogWriteFrequency(PIN_MOTOR_FL_PWM, 146484);
-    analogWriteFrequency(PIN_MOTOR_FR_PWM, 146484);
-    analogWriteFrequency(PIN_MOTOR_BL_PWM, 146484);
-    analogWriteFrequency(PIN_MOTOR_BR_PWM, 146484);
 
-    // Initialise pins
+    // Iniialise motor pins
     pinMode(PIN_MOTOR_FL_DIR, OUTPUT);
     pinMode(PIN_MOTOR_FR_DIR, OUTPUT);
     pinMode(PIN_MOTOR_BL_DIR, OUTPUT);
     pinMode(PIN_MOTOR_BR_DIR, OUTPUT);
+    analogWriteFrequency(PIN_MOTOR_FL_PWM, 146484);
+    analogWriteFrequency(PIN_MOTOR_FR_PWM, 146484);
+    analogWriteFrequency(PIN_MOTOR_BL_PWM, 146484);
+    analogWriteFrequency(PIN_MOTOR_BR_PWM, 146484);
     pinMode(PIN_MOTOR_FL_PWM, OUTPUT);
     pinMode(PIN_MOTOR_FR_PWM, OUTPUT);
     pinMode(PIN_MOTOR_BL_PWM, OUTPUT);
     pinMode(PIN_MOTOR_BR_PWM, OUTPUT);
 
+    // Initialise kicker pin
+    pinMode(PIN_KICKER, OUTPUT);
+
+#ifndef DISABLE_DRIBBLER
+    // Initialise dribbler pins
     analogWriteFrequency(PIN_DRIBBLER_PWM, 1000);
     pinMode(PIN_DRIBBLER_PWM, OUTPUT);
 
-#ifndef DISABLE_DRIBBLER
     // Arm dribbler
     analogWrite(PIN_DRIBBLER_PWM, 128);
     delay(3000);
