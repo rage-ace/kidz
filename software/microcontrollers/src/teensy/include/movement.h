@@ -26,7 +26,8 @@ class Movement {
     void setMoveTo(const Point &destination, const float targetHeading,
                    const Goals &goals);
     void setLinearDecelerate(const int16_t startSpeed, int16_t endSpeed,
-                             float multiplier);
+                             const float multiplier,
+                             const bool replaceVelocity = false);
     // Call for updates at the end of the loop
     void update();
     // Call for immediate updates anywhere

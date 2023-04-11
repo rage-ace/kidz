@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "angle.h"
+#include "vector.h"
 
 // NULL values
 #define NO_LINE_INT16  INT16_MAX
@@ -71,14 +72,18 @@ struct CameraData : _RenewableData {
     uint16_t yellowGoalDistance = NO_BALL_UINT16; // 0(.)0 cm to ~400(.)0 cm
 };
 struct BluetoothPayload : _RenewableData { // This should be symmetric
-    // TODO
-    byte testByte = 0x00;
+    bool masterIsStriker = true;
+    Vector ball;  // relative to field center
+    Vector robot; // relative to field center
 
     // Creates a new BluetoothPayload with newData set as true
-    static BluetoothPayload create(byte testByte) {
+    static BluetoothPayload create(bool masterIsStriker, Vector ball,
+                                   Vector robot) {
         BluetoothPayload newPayload;
         newPayload.newData = true;
-        newPayload.testByte = testByte;
+        newPayload.masterIsStriker = masterIsStriker;
+        newPayload.ball = ball;
+        newPayload.robot = robot;
         return newPayload;
     }
 };

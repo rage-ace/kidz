@@ -175,8 +175,7 @@ void Sensors::onTofPacket(const byte *buf, size_t size) {
         _bounds.right.value = (float)payload.bounds.right.value / 10;
 
     // Update bluetooth data
-    _otherRobot.newData = payload.bluetoothInboundPayload.newData;
-    _otherRobot.testByte = payload.bluetoothInboundPayload.testByte;
+    _otherRobot = payload.bluetoothInboundPayload;
 
     // Consider the STM32 TOF to be initialised
     _tofInit = true;

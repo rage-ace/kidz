@@ -1,0 +1,141 @@
+#include <Arduino.h>
+
+#include "counter.h"
+#include "teensy/include/main.h"
+
+// Counters
+auto debugPrintCounter = Counter();
+
+void performSetupDebug() {
+    // // ESC (128-256)
+    // pinMode(PIN_DRIBBLER_PWM, OUTPUT);
+    // analogWriteFrequency(PIN_DRIBBLER_PWM, 1000);
+    // analogWriteResolution(10);
+    // analogWrite(PIN_DRIBBLER_PWM, 128);
+
+    // // give time for arming sequence
+    // delay(4000);
+    // Serial.setTimeout(10);
+
+    // while (1) { analogWrite(PIN_DRIBBLER_PWM, 200); }
+}
+
+void performLoopDebug() {
+#ifdef DEBUG_MUX
+    // Redirect MUX Serial to monitor
+    while (MUX_SERIAL.available() > 0) Serial.write(MUX_SERIAL.read());
+#endif
+#ifdef DEBUG_TOF
+    // Redirect TOF Serial to monitor
+    while (TOF_SERIAL.available() > 0) Serial.write(TOF_SERIAL.read());
+#endif
+#ifdef DEBUG_IMU
+    // Redirect IMU Serial to monitor
+    while (IMU_SERIAL.available() > 0) Serial.write(IMU_SERIAL.read());
+#endif
+#ifdef DEBUG_CORAL
+    // Redirect Coral Serial to monitor
+    while (CORAL_SERIAL.available() > 0) Serial.write(CORAL_SERIAL.read());
+#endif
+
+#ifdef DEBUG_TEENSY
+    // Test motors
+    // movement.dribble = true;
+    // movement.angle = 0;
+    // movement.velocity = 400;
+    // movement.heading = 0;
+    // movement.updateHeadingController(0);
+    // movement.update();
+    // while (1) {
+    //     analogWrite(PIN_MOTOR_FL_PWM, 190);
+    //     analogWrite(PIN_MOTOR_FR_PWM, 190);
+    //     analogWrite(PIN_MOTOR_BL_PWM, 190);
+    //     analogWrite(PIN_MOTOR_BR_PWM, 190);
+    // }
+
+    // // Line Track
+    // TODO
+
+    if (debugPrintCounter.millisElapsed(100)) {
+        // Print debug data
+        Serial.printf("Line ");
+        if (sensors.line.exists())
+            Serial.printf("%4d.%02dº ", (int)sensors.line.angleBisector,
+                          abs((int)(sensors.line.angleBisector * 100) % 100));
+        else
+            Serial.printf("         ");
+        Serial.printf("%01d.%02d | ", (int)sensors.line.depth,
+                      abs((int)(sensors.line.depth * 100) % 100));
+        if (sensors.robot.established())
+            Serial.printf("Robot Angle %4d.%02dº | ", (int)sensors.robot.angle,
+                          abs((int)(sensors.robot.angle * 100) % 100));
+        else
+            Serial.printf("Robot Angle          | ");
+        // Serial.print("Bounds ");
+        // if (sensors.bounds.front.established())
+        //     Serial.printf("F: %3d.%1d cm ",
+        //     (int)sensors.bounds.front.value,
+        //                   abs((int)(sensors.bounds.front.value * 10)
+        //                   % 10));
+        // else
+        //     Serial.printf("F:          ");
+        if (sensors.bounds.back.established())
+            Serial.printf("B: %3d.%1d cm ", (int)sensors.bounds.back.value,
+                          abs((int)(sensors.bounds.back.value * 10) % 10));
+        else
+            Serial.printf("B:          ");
+        // if (sensors.bounds.left.established())
+        //     Serial.printf("L: %3d.%1d cm ",
+        //     (int)sensors.bounds.left.value,
+        //                   abs((int)(sensors.bounds.left.value * 10) %
+        //                   10));
+        // else
+        //     Serial.printf("L:          ");
+        // if (sensors.bounds.right.established())
+        //     Serial.printf("R: %3d.%1d cm | ",
+        //     (int)sensors.bounds.right.value,
+        //                   abs((int)(sensors.bounds.right.value * 10)
+        //                   % 10));
+        // else
+        //     Serial.printf("R:          | ");
+        if (sensors.ball.exists())
+            Serial.printf("Ball %4d.%02dº %4d.%02d cm | ",
+                          (int)sensors.ball.angle,
+                          abs((int)(sensors.ball.angle * 100) % 100),
+                          (int)sensors.ball.distance,
+                          abs((int)(sensors.ball.distance * 100) % 100));
+        else
+            Serial.printf("Ball                     | ");
+        Serial.printf("Has Ball: %d | ", sensors.hasBall);
+        // if (sensors.goals.exist())
+        //     Serial.printf(
+        //         "Goal O %4d.%02dº %4d.%02d cm D %4d.%02dº %4d.%02d cm
+        //         |
+        //         ", (int)sensors.goals.offensive.angle,
+        //         abs((int)(sensors.goals.offensive.angle * 100) %
+        //         100), (int)sensors.goals.offensive.distance,
+        //         abs((int)(sensors.goals.offensive.distance * 100) %
+        //         100), (int)sensors.goals.defensive.angle,
+        //         abs((int)(sensors.goals.defensive.angle * 100) %
+        //         100), (int)sensors.goals.defensive.distance,
+        //         abs((int)(sensors.goals.defensive.distance * 100) %
+        //         100));
+        // else
+        //     Serial.printf(
+        //         "Goal                                             |
+        //         ");
+        Serial.printf("Other Robot: 0x%02X | ", sensors.otherRobot.testByte);
+        Serial.printf("Drive %4d.%02dº at %4d.%02d | ", (int)movement.angle,
+                      abs((int)(movement.angle * 100) % 100),
+                      (int)movement.velocity,
+                      abs((int)(movement.velocity * 100) % 100));
+        Serial.println();
+    }
+
+    // // Print loop time
+    // printLoopTime();
+
+    // // Figure out lightgate threshold
+    // Serial.println(analogRead(PIN_LIGHTGATE));
+#endif
+}

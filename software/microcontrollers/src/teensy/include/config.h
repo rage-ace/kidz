@@ -8,6 +8,8 @@
 #include "vector.h"
 
 // Flags
+#define MASTER
+// #define DEBUG
 // #define DEBUG_TEENSY
 // #define DEBUG_MUX
 // #define DEBUG_IMU
@@ -16,8 +18,9 @@
 // #define CALIBRATE_IMU
 // #define CALIBRATE_MUX
 // #define CALIBRATE_ROBOT_ANGLE
-#define CALIBRATE_BALL_CURVE
-#define DISABLE_DRIBBLER
+// #define CALIBRATE_BALL_CURVE
+// #define CALIBRATE_GOAL_MOVEMENT
+// #define DISABLE_DRIBBLER
 
 // Macro Flags
 #ifdef DEBUG_TEENSY
@@ -103,7 +106,7 @@
 #define DRIVE_STALL_SPEED          (int16_t)20
 #define DRIVE_MAX_SPEED            (int16_t)1023
 #define DRIBBLER_ARM_SPEED         (int16_t)520
-#define DRIBBLER_SPEED             (int16_t)600
+#define DRIBBLER_SPEED             (int16_t)1023
 #define KICKER_ACTIVATION_DURATION 100  // in ms
 #define KICKER_COOLDOWN_DURATION   1500 // in ms
 
@@ -122,8 +125,8 @@
 // -------------------------------- Robot Speed --------------------------------
 
 // This is the main speed the robot will be travelling at throughout gameplay,
-// and probably the fastest speed. Other aspects of gameplay will start from
-// this speed and decelerate where necessary.
+// and one of the fastest speeds. Other aspects of gameplay will start from this
+// speed and decelerate where necessary.
 #define BASE_SPEED 500.0F
 
 // ------------------------------- Ball Movement -------------------------------
@@ -135,7 +138,7 @@
 // The larger the value, the faster the decay of the angle offset
 #define BALL_MOVEMENT_DECAY 0.03F
 
-#define BALL_MOVEMENT_START_DECELERATING 45.0F // in cm
+#define BALL_MOVEMENT_START_DECELERATING 45.0F // in cm, from wall
 #define BALL_MOVEMENT_START_SPEED        BASE_SPEED
 #define BALL_MOVEMENT_END_SPEED          250.0F
 
@@ -143,7 +146,10 @@
 
 // ------------------------------- Goal Movement -------------------------------
 
-#define GOAL_MOVEMENT_MULTIPLIER 0.2F
+#define GOAL_MOVEMENT_MULTIPLIER         0.2F
+#define GOAL_MOVEMENT_START_DECELERATING 30.0F // in cm, from goal
+#define GOAL_MOVEMENT_START_SPEED        800.0F
+#define GOAL_MOVEMENT_END_SPEED          300.0F
 
 // ------------------------------- Line Avoidance ------------------------------
 

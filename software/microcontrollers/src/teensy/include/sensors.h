@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <deque>
 
+#include "shared_config.h"
 #include "vector.h"
 
 struct Goals {
@@ -45,10 +46,7 @@ class Sensors {
 
         bool established() const { return !std::isnan(angle); }
     } _robot;
-    struct {
-        bool newData = false;
-        byte testByte;
-    } _otherRobot;
+    BluetoothPayload _otherRobot;
     struct {
         bool newData = false;
         float angleBisector = NAN; // -179.99º to 180.00º

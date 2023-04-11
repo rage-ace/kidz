@@ -103,9 +103,11 @@ void Movement::setMoveTo(const Point &destination, const float targetHeading,
 // speed to the end speed, using a multiplier between 0.0 and 1.0.
 void Movement::setLinearDecelerate(const int16_t startSpeed,
                                    const int16_t endSpeed,
-                                   const float multiplier) {
-    velocity =
+                                   const float multiplier,
+                                   const bool replaceVelocity) {
+    const auto newVelocity =
         (startSpeed - endSpeed) * powf(fmin(multiplier, 1.0), 2) + endSpeed;
+    velocity = replaceVelocity ? velocity : fmin(velocity, newVelocity);
 }
 
 // Writes the current movement data.
