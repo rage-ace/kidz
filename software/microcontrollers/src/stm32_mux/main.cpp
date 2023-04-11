@@ -123,8 +123,11 @@ void printLDRThresholds() {
 
     // Print the thresholds (averages of min and max)
     TEENSY_SERIAL.printf("Thresholds: {");
-    for (uint8_t i = 0; i < LDR_COUNT; ++i)
-        TEENSY_SERIAL.printf("%d, ", (min[i] + max[i]) >> 1);
+    for (uint8_t i = 0; i < LDR_COUNT; ++i) {
+        const auto threshold =
+            (max[i] - min[i]) * LDR_CALIBRATION_MULTIPLIER + min[i];
+        TEENSY_SERIAL.printf("%d, ", (uint16_t)threshold);
+    }
     TEENSY_SERIAL.printf("}\n");
 }
 

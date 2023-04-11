@@ -48,7 +48,8 @@
 // Light Sensor Config
 enum LDRMUX { MUX1 = 0x00, MUX2 = 0x01 };
 
-#define LDR_CALIBRATION_DURATION 10000 // In milliseconds
+#define LDR_CALIBRATION_DURATION   10000 // In milliseconds
+#define LDR_CALIBRATION_MULTIPLIER 0.7
 
 #define LDR_PIN_COUNT 16 * 2 // The number of possible input pins on the MUXs
 #define LDR_COUNT     30     // The number of actual photodiodes below the robot
@@ -67,16 +68,24 @@ const std::array<float, LDR_COUNT> LDR_BEARINGS = {
     219.6814, 231.0705, 241.8867, 253.1367, 264.3867, 275.6367,
     286.8867, 298.1367, 309.2879, 320.4649, 333.8737, 351.8859,
 };
+// // Computer Lab (multiplier=0.8)
 // const std::array<uint16_t, LDR_COUNT> LDR_THRESHOLDS = {
-//     709, 728, 717, 745, 756, 776, 797, 787, 740, 802, 834, 798, 796, 776,
-//     772, 800, 773, 786, 783, 780, 760, 766, 759, 735, 720, 748, 770, 757,
-//     734, 775,
+//     3714, 3700, 3703, 3706, 3708, 3719, 3719, 3709, 3776, 3791,
+//     3724, 3710, 3713, 2055, 3694, 3565, 3425, 3460, 3662, 3661,
+//     3601, 3442, 3584, 3602, 3606, 3538, 3474, 3455, 3453, 3403,
 // };
+// // Computer Lab (multiplier=0.7)
 const std::array<uint16_t, LDR_COUNT> LDR_THRESHOLDS = {
-    3160, 3125, 3147, 3144, 3150, 3116, 3172, 3152, 3364, 3361,
-    3146, 3173, 3295, 1507, 3206, 3232, 3020, 3162, 3280, 3143,
-    2882, 2901, 2747, 2609, 2874, 2763, 2797, 2687, 2735, 2660,
+    3536, 3481, 3511, 3517, 3519, 3531, 3536, 3526, 3609, 3643,
+    3591, 3545, 3592, 1872, 3534, 3602, 3455, 3550, 3593, 3555,
+    3394, 3313, 3195, 3347, 3285, 3217, 3200, 3200, 3183, 3238,
 };
+// // Home
+// const std::array<uint16_t, LDR_COUNT> LDR_THRESHOLDS = {
+//     3160, 3125, 3147, 3144, 3150, 3116, 3172, 3152, 3364, 3361,
+//     3146, 3173, 3295, 1507, 3206, 3232, 3020, 3162, 3280, 3143,
+//     2882, 2901, 2747, 2609, 2874, 2763, 2797, 2687, 2735, 2660,
+// };
 #define LDR_ACTIVATION_THRESHOLD 3
 
 #endif
