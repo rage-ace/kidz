@@ -3,20 +3,26 @@
 #include <Arduino.h>
 
 // A simple PID controller.
-PIDController::PIDController(const float setpoint, const float min,
+PIDController::PIDController(const float targetSetpoint, const float min,
                              const float max, const float kp, const float ki,
                              const float kd, const uint32_t minDt,
-                             const float maxi)
-    : setpoint(setpoint), _min(min), _max(max), _kp(kp), _ki(ki), _kd(kd),
-      _minDt(minDt), _maxi(maxi / ki) {}
+                             const float maxi, const float maxSetpointChange)
+    : _targetSetpoint(targetSetpoint), _min(min), _max(max), _kp(kp), _ki(ki),
+      _kd(kd), _minDt(minDt), _maxi(maxi / ki),
+      _maxSetpointChange(maxSetpointChange) {}
 
 // Update controller,
-float PIDController::advance(const float input) {
+float PIDController::advance(const float input, const float scaler) {
     // If this is the first iteration, don't advance the controller yet
     if (_justStarted) {
         _justStarted = false;
         return 0;
     }
+
+    // Try to move setpoint towards target setpoint
+    const auto dsetpoint = constrain(_targetSetpoint - _setpoint,
+                                     -_maxSetpointChange, _maxSetpointChange);
+    _setpoint += dsetpoint;
 
     // If dt is too short, don't advance the controller yet
     if (micros() - _lastTime < _minDt) return _lastOutput;
@@ -27,15 +33,15 @@ float PIDController::advance(const float input) {
     _lastTime = now;
 
     // Find PID components
-    const auto error = setpoint - input;
+    const auto error = _setpoint - input;
     _integral += error * dt;
     _integral = constrain(_integral, -_maxi, _maxi);
     const auto p = _kp * error;
-    const auto i = _ki * _integral;
-    const auto d = _kd * (error - _lastError) / dt;
+    const auto i = (_ki * _kp / dt) * _integral;
+    const auto d = (_kd * _kp * dt) * (error - _lastError) / dt;
 
     // Combine components to get output
-    const auto output = constrain(p + i + d, _min, _max);
+    const auto output = constrain((p + i + d) * scaler, _min, _max);
 
     // For debugging
     _lastInput = input;
@@ -59,6 +65,11 @@ void PIDController::reset() {
     _justStarted = true;
 }
 
+// Update setpoint.
+void PIDController::updateSetpoint(const float value) {
+    _targetSetpoint = value;
+}
+
 // Update limits.
 void PIDController::updateLimits(const float min, const float max) {
     _min = min;
@@ -80,7 +91,7 @@ void PIDController::debugPrint(const char *name, Stream &serial) {
 
     if (name != nullptr) serial.printf("[%s] ", name);
     serial.printf("Setpoint: ");
-    printFloat(setpoint);
+    printFloat(_targetSetpoint);
     serial.printf(" | Input: ");
     printFloat(_lastInput);
     serial.printf(" | Error: ");

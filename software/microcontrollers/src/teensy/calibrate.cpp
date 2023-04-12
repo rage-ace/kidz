@@ -51,20 +51,20 @@ void performCalibration() {
         // Read all sensor values
         sensors.read();
 
-        // Keep straight
-        if (sensors.robot.newData) {
-            movement.updateHeadingController(sensors.robot.angle);
+        // Update heading loop
+        if (sensors.robot.angle.newData) {
+            movement.updateHeadingController(sensors.robot.angle.value);
             // Print controller info
             movement.headingController.debugPrint("Heading");
         }
 
         // // Tune while stationary (rough tuning)
-        // movement.angle = 0;
         // movement.heading = 0;
+        // movement.setStop(true);
         // // Tune while moving (fine tuning)
         // movement.velocity = 300;
         // movement.angle = fmod(millis() / 5, 360);
-        // Tune while moving and turning (finer tuning, reduce period for finer)
+        // Tune while moving and turning (finer tuning)
         movement.velocity = 300;
         movement.angle = fmod(millis() / 5, 360);
         const auto heading = fmod(millis() / 10, 360);
@@ -79,36 +79,19 @@ void performCalibration() {
         // Read all sensor values
         sensors.read();
 
-        // Keep straight
-        if (sensors.robot.newData)
-            movement.updateHeadingController(sensors.robot.angle);
+        // Update heading loop
+        if (sensors.robot.angle.newData)
+            movement.updateHeadingController(sensors.robot.angle.value);
 
-        if (sensors.ball.exists()) {
+        if (sensors.ball.value.exists()) {
             // Move behind the ball if we can see it somewhere else on the field
-            const auto multiplier =
-                fmin(powf(exp(1),
-                          BALL_MOVEMENT_DECAY * (BALL_MOVEMENT_MAX_CURVE -
-                                                 sensors.ball.value.distance)),
-                     1.0);
-            const auto angleOffset =
-                constrain(sensors.ball.value.angle, -90, 90) * multiplier;
-            movement.heading =
-                constrain(sensors.ball.value.angle, -BALL_MOVEMENT_MAX_HEADING,
-                          BALL_MOVEMENT_MAX_HEADING);
-            movement.angle = sensors.ball.value.angle + angleOffset;
-            movement.setLinearDecelerate(
-                BALL_MOVEMENT_START_SPEED, BALL_MOVEMENT_END_SPEED,
-                sensors.ball.value.distance / BALL_MOVEMENT_START_DECELERATING);
+            moveBehindBall();
 
             // Print debug output
             Serial.print("Ball Distance: ");
             Serial.print(sensors.ball.value.distance);
-            Serial.print(" | Multiplier: ");
-            Serial.print(multiplier);
             Serial.print(" | Angle : ");
             Serial.print(sensors.ball.value.angle);
-            Serial.print(" | Angle Offset: ");
-            Serial.print(angleOffset);
             Serial.print(" | Movement angle: ");
             Serial.print(movement.angle);
             Serial.print(" | Movement velocity: ");
@@ -117,10 +100,87 @@ void performCalibration() {
 
         } else {
             // Stop if we can't see the ball
+            movement.heading = 0;
             movement.setStop();
 
             // Print debug output
             Serial.println("Ball not found");
+        }
+
+        // Actuate outputs
+        movement.update();
+    }
+#endif
+#ifdef CALIBRATE_AVOIDANCE
+    while (1) {
+        // Read all sensor values
+        sensors.read();
+
+        // Update heading loop
+        if (sensors.robot.angle.newData)
+            movement.updateHeadingController(sensors.robot.angle.value);
+
+        if (sensors.ball.value.exists()) {
+            // Move behind the ball if we can see it somewhere else on the field
+            moveBehindBall();
+        } else {
+            // Stop if we can't see the ball
+            movement.heading = 0;
+            movement.setStop();
+        }
+
+        // Slow down near the left or right wall
+        avoidSideWalls();
+        // Don't go past the line
+        avoidLine();
+
+        Serial.print("Ball Angle: ");
+        Serial.print(sensors.ball.value.angle);
+        Serial.print(" | Line angle: ");
+        Serial.print(sensors.line.angleBisector);
+        Serial.print(" | Line depth: ");
+        Serial.print(sensors.line.depth);
+        Serial.print(" | Movement angle: ");
+        Serial.print(movement.angle);
+        Serial.print(" | Movement velocity: ");
+        Serial.print(movement.velocity);
+        Serial.println();
+
+        // Actuate outputs
+        movement.update();
+    }
+#endif
+#ifdef CALIBRATE_GOAL_MOVEMENT
+    while (1) {
+        // Read all sensor values
+        sensors.read();
+
+        // Update heading loop
+        if (sensors.robot.angle.newData)
+            movement.updateHeadingController(sensors.robot.angle.value);
+
+        if (sensors.goals.offensive.exists()) {
+            // Move to the goal if we have the ball
+            moveToOffensiveGoal();
+
+            // Don't go past the line
+            avoidLine();
+
+            // Print debug output
+            Serial.print("Goal Distance: ");
+            Serial.print(sensors.goals.offensive.distance);
+            Serial.print(" | Angle : ");
+            Serial.print(sensors.goals.offensive.angle);
+            Serial.print(" | Movement angle: ");
+            Serial.print(movement.angle);
+            Serial.print(" | Movement velocity: ");
+            Serial.print(movement.velocity);
+            Serial.println();
+        } else {
+            movement.dribble = false;
+
+            // Print debug output
+            Serial.println("Goal not found");
         }
 
         // Actuate outputs

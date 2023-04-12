@@ -95,7 +95,7 @@ void Movement::setLinearDecelerate(const int16_t startSpeed,
                                    const bool replaceVelocity) {
     const auto newVelocity =
         (startSpeed - endSpeed) * powf(fmin(multiplier, 1.0), 2) + endSpeed;
-    velocity = replaceVelocity ? velocity : fmin(velocity, newVelocity);
+    velocity = replaceVelocity ? newVelocity : fmin(velocity, newVelocity);
 }
 
 // Writes the current movement data.
@@ -121,8 +121,11 @@ void Movement::update() {
         return (int16_t)roundf(velocity_ * velocity + angularComponent);
     };
     // Find angular component
-    headingController.setpoint = heading; // Update if target heading changed
-    const auto angularVelocity = headingController.advance(_actualHeading);
+    headingController.updateSetpoint(heading);
+    // Scale the controller output linearly to velocity with a reference
+    // velocity of 300 (we tune it at that)
+    const auto angularVelocity =
+        headingController.advance(_actualHeading, (float)velocity / 300);
     const auto angular = 0.25F * angularVelocity;
     // Compute speeds
     const int16_t FLSpeed = transformSpeed(x * COS45 + y * SIN45, angular);

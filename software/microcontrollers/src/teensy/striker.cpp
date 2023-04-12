@@ -23,34 +23,44 @@ void moveBehindBall() {
     // Then, we pack it into instructions for our update function.
     // Try to keep straight as much as possible to ensure the robot has to
     // leave the field the least if the ball is near the boundary.
-    movement.heading =
-        constrain(sensors.ball.value.angle, -BALL_MOVEMENT_MAX_HEADING,
-                  BALL_MOVEMENT_MAX_HEADING);
+    if (sensors.ball.value.distance <= BALL_MOVEMENT_FACE_BALL_DISTANCE) {
+        movement.heading =
+            constrain(sensors.ball.value.angle, -BALL_MOVEMENT_MAX_HEADING,
+                      BALL_MOVEMENT_MAX_HEADING);
+    } else {
+        movement.heading = 0;
+    }
     movement.angle = sensors.ball.value.angle + angleOffset;
     // We have to decelerate as we approach the ball to not overshoot it, as
     // the FPS of the camera would not be able to keep up with the robot's
     // movement.
     movement.setLinearDecelerate(
         BALL_MOVEMENT_START_SPEED, BALL_MOVEMENT_END_SPEED,
-        sensors.ball.value.distance / BALL_MOVEMENT_START_DECELERATING);
+        sensors.ball.value.distance / BALL_MOVEMENT_START_DECELERATING, true);
     movement.dribble = false;
 }
 
-void moveToGoal() {
-    // Move to the goal if we have the ball
-
+void moveToOffensiveGoal() {
     // We use a similar curve algorithm for tracking the goal, but
     // with a constant multiplier instead of an exponential decay
     // multiplier as we want the robot to take a big orbit path,
     // such that it has more space to position itself before shooting.
     const auto angleOffset = constrain(sensors.goals.offensive.angle, -90, 90) *
                              GOAL_MOVEMENT_MULTIPLIER;
+    // Take the distance to the goal as the minimum of that detected by the
+    // camera and TOF, as the TOF can be read at a higher frequency, increasing
+    // response time
+    const auto goalDistance = sensors.bounds.front.valid()
+                                  ? fminf(sensors.goals.offensive.distance,
+                                          sensors.bounds.front.value)
+                                  : sensors.goals.offensive.distance;
+
     // Then, we pack it into instructions for our update function.
     movement.heading = sensors.goals.offensive.angle;
     movement.angle = sensors.goals.offensive.angle + angleOffset;
     movement.setLinearDecelerate(
         GOAL_MOVEMENT_START_SPEED, GOAL_MOVEMENT_END_SPEED,
-        sensors.goals.offensive.distance / GOAL_MOVEMENT_START_DECELERATING);
+        goalDistance / GOAL_MOVEMENT_START_DECELERATING, true);
     movement.dribble = true;
 
     // If we're close enough to the goal, shoot
@@ -61,8 +71,8 @@ void moveToGoal() {
     }
 }
 
-void avoidWall() {
-    // Slow down near the wall
+void avoidSideWalls() {
+    // Slow down near the left or right wall
     if ((sensors.bounds.left.valid() &&
          sensors.bounds.left.value <= WALL_AVOIDANCE_THRESHOLD) ||
         (sensors.bounds.right.valid() &&
@@ -97,7 +107,7 @@ void runStriker() {
         moveBehindBall();
     } else if (sensors.hasBall) {
         // Move to the goal if we have the ball
-        moveToGoal();
+        moveToOffensiveGoal();
     } else {
         // We can't find the ball
         if (sensors.robot.position.exists()) {
@@ -114,7 +124,7 @@ void runStriker() {
     }
 
     // Slow down near the wall
-    avoidWall();
+    avoidSideWalls();
 
     // Avoid the lines
     avoidLine();

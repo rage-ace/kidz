@@ -34,11 +34,11 @@ class Movement {
     void kick();
 
     // Controllers
-    PIDController headingController =
-        PIDController(0,           // Target angle
-                      -1023, 1023, // Output limits
-                      KP_ROBOT_ANGLE, KI_ROBOT_ANGLE, KD_ROBOT_ANGLE, // Gains
-                      MIN_DT_ROBOT_ANGLE, MAXI_ROBOT_ANGLE);
+    PIDController headingController = PIDController(
+        0,                                              // Target angle
+        -1023, 1023,                                    // Output limits
+        KP_ROBOT_ANGLE, KI_ROBOT_ANGLE, KD_ROBOT_ANGLE, // Gains
+        MIN_DT_ROBOT_ANGLE, MAXI_ROBOT_ANGLE, MAX_SETPOINT_CHANGE_ROBOT_ANGLE);
     PIDController moveToController =
         PIDController(0,           // Target distance offset
                       -1023, 1023, // Output limits

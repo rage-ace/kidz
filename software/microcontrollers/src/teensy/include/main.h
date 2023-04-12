@@ -29,4 +29,10 @@ void performCalibration();
 void performSetupDebug();
 void performLoopDebug();
 
+// Subroutines shared with calibrate.cpp
+void moveBehindBall();
+void moveToOffensiveGoal();
+void avoidSideWalls();
+void avoidLine();
+
 #endif

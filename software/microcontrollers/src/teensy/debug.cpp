@@ -30,15 +30,21 @@ void performLoopDebug() {
     // Test motors
     // movement.dribble = true;
     // movement.angle = 0;
-    // movement.velocity = 400;
+    // movement.velocity = 300;
     // movement.heading = 0;
     // movement.updateHeadingController(0);
     // movement.update();
-    // while (1) {
-    //     analogWrite(PIN_MOTOR_FL_PWM, 190);
-    //     analogWrite(PIN_MOTOR_FR_PWM, 190);
-    //     analogWrite(PIN_MOTOR_BL_PWM, 190);
-    //     analogWrite(PIN_MOTOR_BR_PWM, 190);
+    // analogWrite(PIN_MOTOR_FL_PWM, 250);
+    // analogWrite(PIN_MOTOR_FR_PWM, 250);
+    // analogWrite(PIN_MOTOR_BL_PWM, 250);
+    // analogWrite(PIN_MOTOR_BR_PWM, 250);
+    // while (1) {}
+    // for (auto i = 0; i < 4; ++i) {
+    //     analogWrite(PIN_MOTOR_FL_PWM, i == 0 ? 250 : 0);
+    //     analogWrite(PIN_MOTOR_FR_PWM, i == 1 ? 250 : 0);
+    //     analogWrite(PIN_MOTOR_BL_PWM, i == 2 ? 250 : 0);
+    //     analogWrite(PIN_MOTOR_BR_PWM, i == 3 ? 250 : 0);
+    //     delay(4000);
     // }
 
     // // Line Track
@@ -70,27 +76,28 @@ void performLoopDebug() {
         } else {
             Serial.printf("Position                    | ");
         }
-        Serial.print("Bounds ");
-        if (sensors.bounds.front.valid())
-            Serial.printf("F: %3d.%1d cm ", (int)sensors.bounds.front.value,
-                          abs((int)(sensors.bounds.front.value * 10) % 10));
-        else
-            Serial.printf("F:          ");
-        if (sensors.bounds.back.valid())
-            Serial.printf("B: %3d.%1d cm ", (int)sensors.bounds.back.value,
-                          abs((int)(sensors.bounds.back.value * 10) % 10));
-        else
-            Serial.printf("B:          ");
-        if (sensors.bounds.left.valid())
-            Serial.printf("L: %3d.%1d cm ", (int)sensors.bounds.left.value,
-                          abs((int)(sensors.bounds.left.value * 10) % 10));
-        else
-            Serial.printf("L:          ");
-        if (sensors.bounds.right.valid())
-            Serial.printf("R: %3d.%1d cm | ", (int)sensors.bounds.right.value,
-                          abs((int)(sensors.bounds.right.value * 10) % 10));
-        else
-            Serial.printf("R:          | ");
+        // Serial.print("Bounds ");
+        // if (sensors.bounds.front.valid())
+        //     Serial.printf("F: %3d.%1d cm ", (int)sensors.bounds.front.value,
+        //                   abs((int)(sensors.bounds.front.value * 10) % 10));
+        // else
+        //     Serial.printf("F:          ");
+        // if (sensors.bounds.back.valid())
+        //     Serial.printf("B: %3d.%1d cm ", (int)sensors.bounds.back.value,
+        //                   abs((int)(sensors.bounds.back.value * 10) % 10));
+        // else
+        //     Serial.printf("B:          ");
+        // if (sensors.bounds.left.valid())
+        //     Serial.printf("L: %3d.%1d cm ", (int)sensors.bounds.left.value,
+        //                   abs((int)(sensors.bounds.left.value * 10) % 10));
+        // else
+        //     Serial.printf("L:          ");
+        // if (sensors.bounds.right.valid())
+        //     Serial.printf("R: %3d.%1d cm | ",
+        //     (int)sensors.bounds.right.value,
+        //                   abs((int)(sensors.bounds.right.value * 10) % 10));
+        // else
+        //     Serial.printf("R:          | ");
         if (sensors.ball.value.exists())
             Serial.printf("Ball %4d.%02dº %4d.%02d cm | ",
                           (int)sensors.ball.value.angle,
@@ -100,7 +107,7 @@ void performLoopDebug() {
         else
             Serial.printf("Ball                     | ");
         Serial.printf("Has Ball: %d | ", sensors.hasBall);
-        Serial.printf("Goal O ");
+        // Serial.printf("Goal O ");
         // if (sensors.goals.offensive.exists())
         //     Serial.printf(
         //         "%4d.%02dº %4d.%02d cm D ",
@@ -119,9 +126,10 @@ void performLoopDebug() {
         //         abs((sensors.goals.defensive.distance * 100) % 100));
         // else
         //     Serial.printf("                    | ");
-        Serial.printf("Drive %4d.%02dº at %4d | ", (int)movement.angle,
-                      abs((int)(movement.angle * 100) % 100),
-                      movement.velocity);
+        Serial.printf(
+            "Drive %4d.%02dº at %4d facing %4d.%02dº | ", (int)movement.angle,
+            abs((int)(movement.angle * 100) % 100), movement.velocity,
+            (int)movement.heading, abs((int)(movement.heading * 100) % 100));
         Serial.println();
     }
 
