@@ -14,7 +14,8 @@ from camera import Camera, DebugView
 from components import AppState, SingleSlider, XYSlider, HSVSlider
 
 
-HOSTNAME = "kidz.local"
+# HOSTNAME = "kidz.local" # Bot 1
+HOSTNAME = "kidz2.local" # Bot 2
 PORT = 8080
 
 

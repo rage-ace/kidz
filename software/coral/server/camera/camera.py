@@ -42,22 +42,23 @@ class MemoryManager:
         self.params = {
             "frame": {
                 "shape": (480, 640),
-                "center_offset": [-7, 29],
+                # "center_offset": [-7, 29], # Bot 1
+                "center_offset": [8, 2], # Bot 2
                 "crop_radius": 194,
             },
             "mask": {
                 "robot_radius": 16,
                 "mask_field": 0,  # False
-                # HCI Computer Lab
-                "orange": [(5, 70, 220), (25, 255, 255)],
-                "blue": [(100, 70, 200), (110, 255, 255)],
-                "yellow": [(25, 40, 230), (30, 200, 255)],
-                "green": [(70, 70, 110), (90, 255, 255)],
-                # # Home (living room, curtains drawn, cool lights on)
-                # "orange": [(0, 170, 160), (13, 255, 255)],
-                # "blue": [(98, 160, 60), (120, 255, 255)],
-                # "yellow": [(15, 110, 110), (40, 255, 255)],
-                # "green": [(45, 60, 80), (100, 255, 255)],
+                # # HCI Computer Lab
+                # "orange": [(5, 70, 220), (25, 255, 255)],
+                # "blue": [(100, 70, 200), (110, 255, 255)],
+                # "yellow": [(25, 40, 230), (30, 200, 255)],
+                # "green": [(70, 70, 110), (90, 255, 255)],
+                # Home (living room, curtains drawn, cool lights on)
+                "orange": [(0, 170, 160), (13, 255, 255)],
+                "blue": [(98, 160, 60), (120, 255, 255)],
+                "yellow": [(15, 110, 110), (40, 255, 255)],
+                "green": [(45, 60, 80), (100, 255, 255)],
             },
             "contour_size": {
                 "ball": [0, 230],
