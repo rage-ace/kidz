@@ -6,7 +6,18 @@
 // Counters
 auto debugPrintCounter = Counter();
 
-void performSetupDebug() {}
+void performSetupDebug() {
+    // // Test dribbler
+    // pinMode(PIN_DRIBBLER_PWM, OUTPUT);
+    // analogWriteFrequency(PIN_DRIBBLER_PWM, 1000);
+    // analogWriteResolution(10);
+    // analogWrite(PIN_DRIBBLER_PWM, 128);
+
+    // delay(3000);
+    // Serial.print("Done arming");
+
+    // while (1) { analogWrite(PIN_DRIBBLER_PWM, 200); }
+}
 
 void performLoopDebug() {
 #ifdef DEBUG_MUX

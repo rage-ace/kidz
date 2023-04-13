@@ -178,6 +178,9 @@ void loop() {
 
     // ------------------------------ START DEBUG ------------------------------
 
+    // calibrate();
+    // while (1) {}
+
     // // Scan for I2C devices
     // scanI2C(TEENSY_SERIAL, Wire);
     // delay(5000);

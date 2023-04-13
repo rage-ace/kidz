@@ -16,6 +16,13 @@ extern PacketSerial coralSerial;
 extern Sensors sensors;
 extern Movement movement;
 
+// subroutines.cpp
+void updateHeadingLoop();
+void moveBehindBall();
+void moveToOffensiveGoal();
+void avoidSideWalls();
+void avoidLine();
+
 // striker.cpp
 void runStriker();
 
@@ -28,11 +35,5 @@ void performCalibration();
 // debug.cpp
 void performSetupDebug();
 void performLoopDebug();
-
-// Subroutines shared with calibrate.cpp
-void moveBehindBall();
-void moveToOffensiveGoal();
-void avoidSideWalls();
-void avoidLine();
 
 #endif
