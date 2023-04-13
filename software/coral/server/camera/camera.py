@@ -42,7 +42,7 @@ class MemoryManager:
         self.params = {
             "frame": {
                 "shape": (480, 640),
-                # "center_offset": [-7, 29], # Bot 1
+                # "center_offset": [-1, 15], # Bot 1
                 "center_offset": [8, 2], # Bot 2
                 "crop_radius": 194,
             },
@@ -50,9 +50,9 @@ class MemoryManager:
                 "robot_radius": 16,
                 "mask_field": 0,  # False
                 # # HCI Computer Lab
-                # "orange": [(5, 70, 220), (25, 255, 255)],
-                # "blue": [(100, 70, 200), (110, 255, 255)],
-                # "yellow": [(25, 40, 230), (30, 200, 255)],
+                # "orange": [(5, 70, 220), (20, 255, 255)],
+                # "blue": [(100, 70, 150), (110, 255, 255)],
+                # "yellow": [(25, 100, 200), (40, 200, 255)],
                 # "green": [(70, 70, 110), (90, 255, 255)],
                 # Home (living room, curtains drawn, cool lights on)
                 "orange": [(0, 170, 160), (13, 255, 255)],
