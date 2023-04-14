@@ -65,6 +65,7 @@ void Movement::setMoveTo(const Vector &robot, const Point &destination,
     // Update move to state
     if (_lastDestination == nullptr || *_lastDestination != destination) {
         // A new move to routine just started
+        delete _lastDestination;
         _lastDestination = new Point(destination);
         _initialDistance = relativeDestination.distance;
         moveToController.reset();
@@ -85,6 +86,81 @@ void Movement::setMoveTo(const Vector &robot, const Point &destination,
         velocity = 0;
         heading = targetHeading;
     }
+}
+
+void Movement::setLineTrack(const float lineDepth, const float targetLineAngle,
+                            const float targetLineDepth,
+                            const bool trackRightSide) {
+    // Update line track state
+    if (_lastTargetLineAngle == NAN ||
+        _lastTargetLineAngle != targetLineAngle) {
+        // A new line track routine just started
+        _lastTargetLineAngle = targetLineAngle;
+        lineTrackController.reset();
+    }
+
+    // Compute error to use in control loop
+    const auto trackingForwards =
+        targetLineAngle >= -90 && targetLineAngle <= 90;
+    const auto controllerError = trackingForwards ^ trackRightSide
+                                     ? lineDepth - targetLineDepth
+                                     : targetLineDepth - lineDepth;
+
+    // Pack it into instructions for our update function
+    _lineTrackActive = true;
+    // Scale the controller output linearly to velocity with a reference
+    // velocity of 300 (we tune it at that)
+    angle = targetLineAngle - _actualHeading +
+            lineTrackController.advance(controllerError, (float)velocity / 300,
+                                        true);
+}
+
+void Movement::setMoveOnLineToBall(const float lineDepth, const Vector &ball,
+                                   const float targetLineDepth,
+                                   const bool trackRightSide) {
+    // Update move on line to ball state
+    if (_lastTrackBallRightSide == nullptr ||
+        *_lastTrackBallRightSide != trackRightSide) {
+        // A new move on line to ball routine just started
+        delete _lastTrackBallRightSide;
+        _lastTrackBallRightSide = new bool(trackRightSide);
+        moveOnLineToBallController.reset();
+    }
+
+    // Take a robot approaching the left boundary line as reference:
+    // 1. If the ball is to the left/behind the robot, line track
+    // backwards. Note that even if the ball is to the right of the
+    // robot, we choose to line track if it's too far back, as the
+    // robot's attempt to curve behind the ball would likely lie
+    // beyond the line.
+    // 2. If the ball is to the left/in front of the robot, line track
+    // forwards.
+    if (trackRightSide
+            ? (ball.angle <= 0 || ball.angle > LINE_TRACKING_NO_CURVE_THRESHOLD)
+            : (ball.angle >= 0 ||
+               ball.angle < -LINE_TRACKING_NO_CURVE_THRESHOLD)) {
+        // We should be line tracking here
+
+        const auto adjustedBallAngle = clipAngle(ball.angle - _actualHeading);
+        const auto ballDistance =
+            (trackRightSide
+                 ? (adjustedBallAngle > -90 && adjustedBallAngle <= 0)
+                 : (adjustedBallAngle < 90 && adjustedBallAngle >= 0))
+                ? ball.distance
+                : -ball.distance;
+        const auto correction =
+            moveOnLineToBallController.advance(ballDistance);
+        velocity = abs(correction);
+        setLineTrack(lineDepth, correction < 0 ? 0 : 180, targetLineDepth,
+                     trackRightSide);
+    } else {
+        // Since the ball is within a range where we can feasible curve
+        // to it, let's just do that.
+
+        // Don't override ball curve values, so don't do anything
+    }
+
+    _moveOnLineToBallActive = true;
 }
 
 // Sets the velocity to decrease such that deceleration is linear from the start
@@ -124,8 +200,10 @@ void Movement::update() {
     headingController.updateSetpoint(heading);
     // Scale the controller output linearly to velocity with a reference
     // velocity of 300 (we tune it at that)
+    auto scaler =
+        velocity == 0 ? STATIONARY_SCALER_ROBOT_ANGLE : (float)velocity / 300;
     const auto angularVelocity =
-        headingController.advance(_actualHeading, (float)velocity / 300);
+        headingController.advance(_actualHeading, scaler, true);
     const auto angular = 0.25F * angularVelocity;
     // Compute speeds
     const int16_t FLSpeed = transformSpeed(x * COS45 + y * SIN45, angular);
@@ -172,6 +250,19 @@ void Movement::update() {
         _lastDestination = nullptr;
     }
     _moveToActive = false;
+
+    // Invalidate line track routine (it can be reactivated by calling
+    // setLineTrack)
+    if (!_lineTrackActive) { _lastTargetLineAngle = NAN; }
+    _lineTrackActive = false;
+
+    // Invalidate move on line to ball routine (it can be reactivated by calling
+    // setMoveOnLineToBall)
+    if (!_moveOnLineToBallActive) {
+        delete _lastTrackBallRightSide;
+        _lastTrackBallRightSide = nullptr;
+    }
+    _moveOnLineToBallActive = false;
 }
 
 void Movement::kick() {

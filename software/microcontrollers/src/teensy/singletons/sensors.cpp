@@ -105,10 +105,10 @@ void Sensors::onMuxPacket(const byte *buf, size_t size) {
             if (_isInside) {
                 // Robot moved from the inner half to the outer half of the line
                 _line.depth = 1 - lineSize / 2;
-                _line.angleBisector = clipAngle(_line.angleBisector + 180);
             } else {
                 // Robot moved from the outer half to the inner half of the line
                 _line.depth = lineSize / 2;
+                _line.angleBisector = clipAngle(_line.angleBisector + 180);
             }
             _isInside = !_isInside;
 
@@ -120,10 +120,10 @@ void Sensors::onMuxPacket(const byte *buf, size_t size) {
         } else if (_isInside) {
             // The robot didn't switch sides, on the inner half of the line
             _line.depth = lineSize / 2;
+            _line.angleBisector = clipAngle(_line.angleBisector + 180);
         } else {
             // The robot didn't switch sides, on the outer half of the line
             _line.depth = 1 - lineSize / 2;
-            _line.angleBisector = clipAngle(_line.angleBisector + 180);
         }
     } else {
         // The robot is not on the line
@@ -162,30 +162,30 @@ void Sensors::onTofPacket(const byte *buf, size_t size) {
         // Calculate bounds, taking into account robot angle
         // TODO: Come up with a more robust way to do this that fits a rectangle
         // to the measured distances
-        if (payload.bounds.front.value == NO_BOUNDS &&
-            payload.bounds.front.value <= TOF_MAX_DISTANCE) {
+        if (payload.bounds.front.value == NO_BOUNDS ||
+            payload.bounds.front.value > TOF_MAX_DISTANCE * 10) {
             _bounds.front.value = NAN;
         } else {
             const auto measurement = (float)payload.bounds.front.value / 10;
             _bounds.front.value =
                 measurement * fabsf(cosfd(_robot.angle.value));
         }
-        if (payload.bounds.back.value == NO_BOUNDS &&
-            payload.bounds.back.value <= TOF_MAX_DISTANCE) {
+        if (payload.bounds.back.value == NO_BOUNDS ||
+            payload.bounds.back.value > TOF_MAX_DISTANCE * 10) {
             _bounds.back.value = NAN;
         } else {
             const auto measurement = (float)payload.bounds.back.value / 10;
             _bounds.back.value = measurement * fabsf(cosfd(_robot.angle.value));
         }
-        if (payload.bounds.left.value == NO_BOUNDS &&
-            payload.bounds.left.value <= TOF_MAX_DISTANCE) {
+        if (payload.bounds.left.value == NO_BOUNDS ||
+            payload.bounds.left.value > TOF_MAX_DISTANCE * 10) {
             _bounds.left.value = NAN;
         } else {
             const auto measurement = (float)payload.bounds.left.value / 10;
             _bounds.left.value = measurement * fabsf(cosfd(_robot.angle.value));
         }
-        if (payload.bounds.right.value == NO_BOUNDS &&
-            payload.bounds.right.value <= TOF_MAX_DISTANCE) {
+        if (payload.bounds.right.value == NO_BOUNDS ||
+            payload.bounds.right.value > TOF_MAX_DISTANCE * 10) {
             _bounds.right.value = NAN;
         } else {
             const auto measurement = (float)payload.bounds.right.value / 10;

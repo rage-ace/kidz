@@ -1,6 +1,8 @@
 #include <Arduino.h>
 
+#include "counter.h"
 #include "teensy/include/main.h"
+#include "teensy/include/movement.h"
 
 void performCalibration() {
 #ifdef CALIBRATE_IMU
@@ -11,17 +13,18 @@ void performCalibration() {
     memcpy(buf, &calibrating, sizeof(calibrating));
     // Send 100 times to ensure it gets through
     for (int i = 0; i < 100; i++) imuSerial.send(buf, sizeof(buf));
+    Serial.println("Calibrating");
 
-    movement.speed = 100;
+    movement.velocity = 100;
     auto rotateCounter = Counter();
     auto speedCounter = Counter();
     while (1) {
         // Redirect IMU Serial to monitor
-        while (imuSerial.available() > 0) Serial.write(imuSerial.read());
+        while (IMU_SERIAL.available() > 0) Serial.write(IMU_SERIAL.read());
 
         // Drive motors to create magnetometer noise
         if (speedCounter.millisElapsed(100)) {
-            movement.speed = -movement.speed;
+            movement.velocity = -movement.velocity;
         }
         if (rotateCounter.millisElapsed(1)) {
             if (movement.angle == 18000)
@@ -52,23 +55,21 @@ void performCalibration() {
         sensors.read();
 
         // Update heading loop
-        if (sensors.robot.angle.newData) {
-            movement.updateHeadingController(sensors.robot.angle.value);
-            // Print controller info
+        updateHeadingLoop();
+        if (sensors.robot.angle.newData)
             movement.headingController.debugPrint("Heading");
-        }
 
-        // // Tune while stationary (rough tuning)
-        // movement.heading = 0;
-        // movement.setStop(true);
+        // Tune while stationary (rough tuning)
+        movement.heading = 0;
+        movement.setStop(true);
         // // Tune while moving (fine tuning)
         // movement.velocity = 300;
         // movement.angle = fmod(millis() / 5, 360);
-        // Tune while moving and turning (finer tuning)
-        movement.velocity = 300;
-        movement.angle = fmod(millis() / 5, 360);
-        const auto heading = fmod(millis() / 10, 360);
-        movement.heading = heading > 180 ? heading - 360 : heading;
+        // // Tune while moving and turning (finer tuning)
+        // movement.velocity = 300;
+        // movement.angle = fmod(millis() / 5, 360);
+        // const auto heading = fmod(millis() / 100, 360);
+        // movement.heading = heading > 180 ? heading - 360 : heading;
 
         // Actuate outputs
         movement.update();
@@ -80,22 +81,26 @@ void performCalibration() {
         sensors.read();
 
         // Update heading loop
-        if (sensors.robot.angle.newData)
-            movement.updateHeadingController(sensors.robot.angle.value);
+        updateHeadingLoop();
 
         if (sensors.ball.value.exists()) {
             // Move behind the ball if we can see it somewhere else on the field
             moveBehindBall();
+            // Don't go past the line
+            avoidLine();
 
             // Print debug output
             Serial.print("Ball Distance: ");
             Serial.print(sensors.ball.value.distance);
             Serial.print(" | Angle : ");
             Serial.print(sensors.ball.value.angle);
-            Serial.print(" | Movement angle: ");
+            Serial.print(" | Move in ");
             Serial.print(movement.angle);
-            Serial.print(" | Movement velocity: ");
+            Serial.print("º at ");
             Serial.print(movement.velocity);
+            Serial.print(" facing ");
+            Serial.print(movement.heading);
+            Serial.print("º");
             Serial.println();
 
         } else {
@@ -117,8 +122,7 @@ void performCalibration() {
         sensors.read();
 
         // Update heading loop
-        if (sensors.robot.angle.newData)
-            movement.updateHeadingController(sensors.robot.angle.value);
+        updateHeadingLoop();
 
         if (sensors.ball.value.exists()) {
             // Move behind the ball if we can see it somewhere else on the field
@@ -134,17 +138,51 @@ void performCalibration() {
         // Don't go past the line
         avoidLine();
 
-        Serial.print("Ball Angle: ");
+        Serial.print("Ball: ");
         Serial.print(sensors.ball.value.angle);
-        Serial.print(" | Line angle: ");
+        Serial.print("º ");
+        Serial.print(sensors.ball.value.distance);
+        Serial.print(" cm | Line: ");
         Serial.print(sensors.line.angleBisector);
-        Serial.print(" | Line depth: ");
+        Serial.print("º ");
         Serial.print(sensors.line.depth);
-        Serial.print(" | Movement angle: ");
+        Serial.print(" | Move in ");
         Serial.print(movement.angle);
-        Serial.print(" | Movement velocity: ");
+        Serial.print("º at ");
         Serial.print(movement.velocity);
+        Serial.print(" facing ");
+        Serial.print(movement.heading);
+        Serial.print("º");
         Serial.println();
+
+        // movement.moveOnLineToBallController.debugPrint("Move to Ball");
+
+        // Actuate outputs
+        movement.update();
+    }
+#endif
+#ifdef CALIBRATE_LINE_TRACK
+    while (1) {
+        // Read all sensor values
+        sensors.read();
+
+        // Update heading loop
+        updateHeadingLoop();
+
+        // Track the line
+        movement.setLineTrack(sensors.line.depth, 0,
+                              LINE_AVOIDANCE_THRESHOLD / 2, false);
+        movement.velocity = 300;
+
+        // Print debug output
+        Serial.print("Move in ");
+        Serial.print(movement.angle);
+        Serial.print("º at ");
+        Serial.print(movement.velocity);
+        Serial.print(" facing ");
+        Serial.print(movement.heading);
+        Serial.print("º ");
+        movement.lineTrackController.debugPrint("Line Track");
 
         // Actuate outputs
         movement.update();
@@ -156,8 +194,7 @@ void performCalibration() {
         sensors.read();
 
         // Update heading loop
-        if (sensors.robot.angle.newData)
-            movement.updateHeadingController(sensors.robot.angle.value);
+        updateHeadingLoop();
 
         if (sensors.goals.offensive.exists()) {
             // Move to the goal if we have the ball
@@ -167,14 +204,19 @@ void performCalibration() {
             avoidLine();
 
             // Print debug output
-            Serial.print("Goal Distance: ");
+            Serial.print("Goal: ");
             Serial.print(sensors.goals.offensive.distance);
-            Serial.print(" | Angle : ");
+            Serial.print(" cm at ");
             Serial.print(sensors.goals.offensive.angle);
-            Serial.print(" | Movement angle: ");
+            Serial.print("º | Front TOF: ");
+            Serial.print(sensors.bounds.front.value);
+            Serial.print(" cm | Move in ");
             Serial.print(movement.angle);
-            Serial.print(" | Movement velocity: ");
+            Serial.print("º at ");
             Serial.print(movement.velocity);
+            Serial.print(" facing ");
+            Serial.print(movement.heading);
+            Serial.print("º");
             Serial.println();
         } else {
             movement.dribble = false;

@@ -25,6 +25,11 @@ class Movement {
     void setStop(bool maintainHeading = true);
     void setMoveTo(const Vector &robot, const Point &destination,
                    const float targetHeading);
+    void setLineTrack(const float lineDepth, const float targetLineAngle,
+                      const float targetLineDepth, const bool trackRightSide);
+    void setMoveOnLineToBall(const float lineDepth, const Vector &ball,
+                             const float targetLineDepth,
+                             const bool trackRightSide);
     void setLinearDecelerate(const int16_t startSpeed, int16_t endSpeed,
                              const float multiplier,
                              const bool replaceVelocity = false);
@@ -44,16 +49,37 @@ class Movement {
                       -1023, 1023, // Output limits
                       KP_MOVE_TO, KI_MOVE_TO, KD_MOVE_TO, // Gains
                       MIN_DT_MOVE_TO);
+    PIDController lineTrackController =
+        PIDController(0,       // Target angle offset
+                      -90, 90, // Output limits
+                      KP_LINE_TRACK, KI_LINE_TRACK, KD_LINE_TRACK, // Gains
+                      MIN_DT_LINE_TRACK, MAXI_LINE_TRACK);
+
+    PIDController moveOnLineToBallController =
+        PIDController(MOVE_ON_LINE_TO_BALL_DISTANCE_OFFSET, // Target
+                      -MOVE_ON_LINE_TO_BALL_MAX_SPEED,
+                      MOVE_ON_LINE_TO_BALL_MAX_SPEED, // Output limits
+                      KP_MOVE_ON_LINE_TO_BALL, KI_MOVE_ON_LINE_TO_BALL,
+                      KD_MOVE_ON_LINE_TO_BALL, // Gains
+                      MIN_DT_MOVE_ON_LINE_TO_BALL, MAXI_MOVE_ON_LINE_TO_BALL,
+                      MAX_SETPOINT_CHANGE_MOVE_ON_LINE_TO_BALL);
 
   private:
     // Movement parameters
     bool _brake = false;
 
     // Internal values
-    bool _moveToActive = false;
-    Point *_lastDestination = nullptr;
     float _actualHeading = 0;
+    // for setMoveTo()
+    bool _moveToActive = false;
+    Point *_lastDestination = nullptr; // checks if different destination
     float _initialDistance = NAN;
+    // for setLineTrack()
+    bool _lineTrackActive = false;
+    float _lastTargetLineAngle = NAN; // checks if different line
+    // for setMoveOnLineToBall()
+    bool _moveOnLineToBallActive = false;
+    bool *_lastTrackBallRightSide = nullptr; // checks if different line
 
     bool _kickerActivated = false;
     uint32_t _kickTime = 0;

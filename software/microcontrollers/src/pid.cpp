@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include "angle.h"
+
 // A simple PID controller.
 PIDController::PIDController(const float targetSetpoint, const float min,
                              const float max, const float kp, const float ki,
@@ -12,7 +14,8 @@ PIDController::PIDController(const float targetSetpoint, const float min,
       _maxSetpointChange(maxSetpointChange) {}
 
 // Update controller,
-float PIDController::advance(const float input, const float scaler) {
+float PIDController::advance(const float input, const float scaler,
+                             const bool isAngle) {
     // If this is the first iteration, don't advance the controller yet
     if (_justStarted) {
         _justStarted = false;
@@ -33,15 +36,31 @@ float PIDController::advance(const float input, const float scaler) {
     _lastTime = now;
 
     // Find PID components
-    const auto error = _setpoint - input;
+    auto error = _setpoint - input;
+
+    // TODO: Consider whether this is beneficial
+    // // Correct for errors that are angles
+    // if (isAngle) {
+    //     // If it goes beyond ±180º ∓ 90º, we try correcting in the other
+    //     // direction instead of going all the way around
+    //     if (error > 270.0F) {
+    //         error = -90.0F;
+    //         reset();
+    //     } else if (error < -270.0F) {
+    //         error = 90.0F;
+    //         reset();
+    //     }
+    // }
+
     _integral += error * dt;
     _integral = constrain(_integral, -_maxi, _maxi);
-    const auto p = _kp * error;
-    const auto i = (_ki * _kp / dt) * _integral;
-    const auto d = (_kd * _kp * dt) * (error - _lastError) / dt;
+    const auto p = (_kp * scaler) * error;
+    const auto i = (_ki * _kp / dt * scaler) * _integral;
+    const auto d =
+        (_kd * _kp * dt * powf(scaler, 2)) * (error - _lastError) / dt;
 
     // Combine components to get output
-    const auto output = constrain((p + i + d) * scaler, _min, _max);
+    const auto output = constrain(p + i + d, _min, _max);
 
     // For debugging
     _lastInput = input;

@@ -67,15 +67,22 @@ void loop() {
     sensors.read();
 
     // Maintain heading
-    if (sensors.robot.angle.newData)
-        movement.updateHeadingController(sensors.robot.angle.value);
+    updateHeadingLoop();
 
 #ifdef MASTER
     // Performs tasks as the master robot
-    runStriker();
+    if (sensors.otherRobot.masterIsStriker) {
+        runStriker();
+    } else {
+        runGoalie();
+    }
 #else
     // Performs tasks as the slave robot
-    runGoalie();
+    if (!sensors.otherRobot.masterIsStriker) {
+        runStriker();
+    } else {
+        runGoalie();
+    }
 #endif
 
 #ifdef DEBUG

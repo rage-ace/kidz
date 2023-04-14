@@ -11,7 +11,8 @@ class PIDController {
                   const float maxSetpointChange = infinityf());
 
     // Update controller
-    float advance(const float input, const float scaler = 1.0);
+    float advance(const float input, const float scaler = 1.0,
+                  const bool isAngle = false);
     void reset();
 
     // Update parameters
